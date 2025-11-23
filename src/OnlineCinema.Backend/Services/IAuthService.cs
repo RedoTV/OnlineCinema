@@ -1,4 +1,4 @@
-using OnlineCinema.Backend.Models.DTOs;
+using OnlineCinema.Backend.Models.DTOs.Auth;
 
 namespace OnlineCinema.Backend.Services;
 

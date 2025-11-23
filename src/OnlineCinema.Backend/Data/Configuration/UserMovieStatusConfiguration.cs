@@ -9,16 +9,9 @@ public class UserMovieStatusConfiguration : IEntityTypeConfiguration<UserMovieSt
     public void Configure(EntityTypeBuilder<UserMovieStatus> builder)
     {
         builder.HasKey(e => e.Id);
-
         builder.HasIndex(e => new { e.UserId, e.MovieId, e.Status }).IsUnique();
-
-        builder.Property(e => e.Status)
-            .HasConversion<string>()
-            .HasMaxLength(20)
-            .IsRequired();
-
-        builder.Property(e => e.AddedAt)
-            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        builder.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(e => e.AddedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
         builder.HasOne(ums => ums.User)
             .WithMany(u => u.UserMovieStatuses)

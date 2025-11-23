@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using OnlineCinema.Backend.Data;
 using OnlineCinema.Backend.Models;
-using OnlineCinema.Backend.Models.DTOs;
+using OnlineCinema.Backend.Models.DTOs.Auth;
 
 namespace OnlineCinema.Backend.Services;
 

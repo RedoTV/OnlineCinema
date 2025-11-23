@@ -1,12 +1,12 @@
-using AutoMapper;
+﻿using AutoMapper;
 using OnlineCinema.Backend.Models;
-using OnlineCinema.Backend.Models.DTOs;
+using OnlineCinema.Backend.Models.DTOs.Auth;
 
-namespace OnlineCinema.Backend.Mapper;
+namespace OnlineCinema.Backend.Mappings;
 
-public class MappingProfile : Profile
+public class AuthProfile : Profile
 {
-    public MappingProfile()
+    public AuthProfile()
     {
         CreateMap<RegisterRequestDto, User>();
         CreateMap<User, UserDto>();

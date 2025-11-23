@@ -1,4 +1,4 @@
-namespace OnlineCinema.Backend.Models.DTOs;
+namespace OnlineCinema.Backend.Models.DTOs.Auth;
 
 public class AuthResponseDto
 {
