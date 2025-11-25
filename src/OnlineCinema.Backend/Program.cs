@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.OpenApi.Models;
 using OnlineCinema.Backend.Data;
 using OnlineCinema.Backend.Services;
 
@@ -24,15 +26,48 @@ builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "OnlineCinema API",
+        Version = "v1"
+    });
 
-var allowedOrigin = builder.Configuration["FRONTEND_URL"];
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Введите JWT токен в формате: Bearer {токен}"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+
+var allowedOrigin = builder.Configuration["FRONTEND_URL"] ?? "http://localhost:5173";
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(allowedOrigin!)
+        policy.WithOrigins(allowedOrigin)
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -47,14 +82,25 @@ MigrateDatabase(app);
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseStaticFiles();
+var staticPath = Path.Combine(builder.Environment.ContentRootPath, "static");
+if (!Directory.Exists(staticPath))
+{
+    Directory.CreateDirectory(staticPath);
+}
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(staticPath),
+    RequestPath = "/static"
+});
+
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
-
 app.UseCors("AllowFrontend");
+
+app.MapControllers();
 
 app.Run();
 

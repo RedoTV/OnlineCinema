@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using OnlineCinema.Backend.Data;
 using OnlineCinema.Backend.Models;
 using OnlineCinema.Backend.Models.DTOs.Auth;
+using OnlineCinema.Backend.Services.Helpers;
 
 namespace OnlineCinema.Backend.Services;
 
@@ -26,17 +26,25 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request)
     {
-        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+        var existingUser = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Email == request.Email || u.Username == request.Username);
+
+        if (existingUser != null)
         {
+            var message = existingUser.Email == request.Email
+                ? "User with this email already exists"
+                : "User with this username already exists";
+
             return new AuthResponseDto
             {
                 Success = false,
-                Message = "User already exists"
+                Message = message
             };
         }
 
-        var salt = GenerateSalt();
-        var hashedPassword = HashPassword(request.Password, salt);
+        var salt = PasswordHasher.GenerateSalt();
+        var hashedPassword = PasswordHasher.HashPassword(request.Password, salt);
 
         var user = _mapper.Map<User>(request);
         user.PasswordHash = hashedPassword;
@@ -68,7 +76,7 @@ public class AuthService : IAuthService
             };
         }
 
-        var hashedPassword = HashPassword(request.Password, user.PasswordSalt);
+        var hashedPassword = PasswordHasher.HashPassword(request.Password, user.PasswordSalt);
 
         if (hashedPassword != user.PasswordHash)
         {
@@ -89,25 +97,6 @@ public class AuthService : IAuthService
         return response;
     }
 
-    private string GenerateSalt()
-    {
-        var buffer = new byte[128 / 8];
-        using (var rng = RandomNumberGenerator.Create())
-        {
-            rng.GetBytes(buffer);
-        }
-        return Convert.ToBase64String(buffer);
-    }
-
-    private string HashPassword(string password, string salt)
-    {
-        using (var pbkdf2 = new Rfc2898DeriveBytes(password, Encoding.UTF8.GetBytes(salt), 10000, HashAlgorithmName.SHA256))
-        {
-            var hash = pbkdf2.GetBytes(20);
-            return Convert.ToBase64String(hash);
-        }
-    }
-
     private string GenerateJwtToken(User user)
     {
         var jwtSecret = _configuration["JwtSettings:Secret"];
@@ -122,7 +111,8 @@ public class AuthService : IAuthService
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim("username", user.Username)
+            new Claim("username", user.Username),
+            new Claim(ClaimTypes.Role, user.Role)
         };
 
         var token = new JwtSecurityToken(

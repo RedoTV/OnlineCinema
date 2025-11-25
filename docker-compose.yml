@@ -33,7 +33,20 @@ services:
     networks:
       - onlinecinema_network
     volumes:
-      - ./static:/app/static
+      - ./src/OnlineCinema.Backend/static:/app/static
+
+  frontend:
+    build:
+      context: ./src/OnlineCinema.Frontend
+      dockerfile: Dockerfile
+    container_name: onlinecinema_frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - onlinecinema_network
 
 volumes:
   postgres_data:

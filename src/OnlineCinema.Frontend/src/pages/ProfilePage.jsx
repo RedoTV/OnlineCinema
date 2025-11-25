@@ -1,0 +1,77 @@
+import React, { useEffect, useState, useContext } from 'react';
+import { api } from '../api/axios';
+import { AuthContext } from '../context/AuthContext';
+
+export const ProfilePage = () => {
+  const { user, logout } = useContext(AuthContext);
+  const [myMovies, setMyMovies] = useState([]);
+  const [filterStatus, setFilterStatus] = useState('');
+
+  useEffect(() => {
+    const fetchMyMovies = async () => {
+      try {
+        const params = filterStatus ? `?status=${filterStatus}` : '';
+        const res = await api.get(`/UserActions/my-movies${params}`);
+        setMyMovies(res.data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    if (user) fetchMyMovies();
+  }, [user, filterStatus]);
+
+  if (!user) return <div className="text-xl font-bold">Требуется вход в систему.</div>;
+
+  return (
+    <div>
+      <div className="flex justify-between items-end mb-8 border-b-4 border-black pb-4">
+        <div>
+          <div className="text-sm text-gray-500 font-bold mb-1">ПОЛЬЗОВАТЕЛЬ</div>
+          <h2 className="text-3xl font-black uppercase">{user.username}</h2>
+        </div>
+        <button onClick={logout} className="text-red-600 font-bold border-2 border-red-600 px-4 py-2 hover:bg-red-600 hover:text-white transition-colors">
+          ВЫЙТИ
+        </button>
+      </div>
+
+      {/* Фильтры в виде табов */}
+      <div className="flex flex-wrap gap-4 mb-8">
+        {['', 'Planned', 'Watched', 'Favorite'].map(status => (
+          <button
+            key={status}
+            onClick={() => setFilterStatus(status)}
+            className={`px-6 py-2 border-2 border-black font-bold uppercase transition-all ${filterStatus === status
+                ? 'bg-black text-white'
+                : 'hover:bg-gray-100'
+              }`}
+          >
+            {status === '' ? 'ВСЕ' : status}
+          </button>
+        ))}
+      </div>
+
+      {/* Список фильмов - строгий список */}
+      <div className="space-y-4">
+        {myMovies.length === 0 ? (
+          <p className="text-lg italic text-gray-500">Список пуст</p>
+        ) : (
+          myMovies.map(m => (
+            <div key={m.movieId} className="flex items-center border-2 border-black p-2 hover:bg-gray-50 transition-colors">
+              <img
+                src={m.posterUrl ? `http://localhost:5000${m.posterUrl}` : '/placeholder.jpg'}
+                className="w-12 h-16 object-cover border border-black mr-4"
+                alt="poster"
+              />
+              <div className="flex-1">
+                <h4 className="font-bold text-lg">{m.movieTitle}</h4>
+                <span className="text-sm font-medium border border-black px-2 py-0.5 bg-white inline-block mt-1">
+                  {m.status}
+                </span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};

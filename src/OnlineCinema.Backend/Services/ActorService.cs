@@ -31,6 +31,7 @@ public class ActorService : IActorService
             .Include(a => a.Movies)
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == id);
+
         return actor == null ? null : _mapper.Map<ActorDto>(actor);
     }
 
@@ -55,10 +56,15 @@ public class ActorService : IActorService
     public async Task<string> UploadPhotoAsync(int id, IFormFile file)
     {
         var actor = await _context.Actors.FindAsync(id) ?? throw new KeyNotFoundException($"Actor with ID {id} not found");
-        if (!string.IsNullOrEmpty(actor.PhotoUrl)) _fileService.DeleteFile(actor.PhotoUrl);
+
+        if (!string.IsNullOrEmpty(actor.PhotoUrl))
+        {
+            _fileService.DeleteFile(actor.PhotoUrl);
+        }
 
         actor.PhotoUrl = await _fileService.SaveFileAsync(file, "actors");
         await _context.SaveChangesAsync();
+
         return actor.PhotoUrl;
     }
 
@@ -68,6 +74,7 @@ public class ActorService : IActorService
         if (actor == null) throw new KeyNotFoundException($"Actor with ID {id} not found");
 
         _fileService.DeleteFile(actor.PhotoUrl);
+
         _context.Actors.Remove(actor);
         await _context.SaveChangesAsync();
     }

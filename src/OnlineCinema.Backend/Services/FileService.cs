@@ -1,4 +1,11 @@
-﻿namespace OnlineCinema.Backend.Services;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
+using System;
+using System.IO;
+using System.Threading.Tasks;
+
+namespace OnlineCinema.Backend.Services;
 
 public class FileService : IFileService
 {
@@ -13,19 +20,15 @@ public class FileService : IFileService
 
     public async Task<string> SaveFileAsync(IFormFile file, string folderName)
     {
-        if (string.IsNullOrEmpty(_environment.WebRootPath))
-        {
-            _environment.WebRootPath = Path.Combine(Directory.GetCurrentDirectory(), "static");
-        }
-
-        var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-        var uploadPath = Path.Combine(_environment.WebRootPath, folderName);
+        var staticPath = Path.Combine(_environment.ContentRootPath, "static");
+        var uploadPath = Path.Combine(staticPath, folderName);
 
         if (!Directory.Exists(uploadPath))
         {
             Directory.CreateDirectory(uploadPath);
         }
 
+        var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
         var filePath = Path.Combine(uploadPath, uniqueFileName);
 
         using (var fileStream = new FileStream(filePath, FileMode.Create))
@@ -40,13 +43,10 @@ public class FileService : IFileService
     {
         if (string.IsNullOrEmpty(relativePath)) return;
 
-        if (string.IsNullOrEmpty(_environment.WebRootPath))
-        {
-            _environment.WebRootPath = Path.Combine(Directory.GetCurrentDirectory(), "static");
-        }
+        var staticPath = Path.Combine(_environment.ContentRootPath, "static");
 
         var localPath = relativePath.Replace("/static/", "", StringComparison.OrdinalIgnoreCase);
-        var fullPath = Path.Combine(_environment.WebRootPath, localPath);
+        var fullPath = Path.Combine(staticPath, localPath);
 
         try
         {

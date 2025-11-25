@@ -10,6 +10,7 @@ public class AuthProfile : Profile
     {
         CreateMap<RegisterRequestDto, User>();
         CreateMap<User, UserDto>();
-        CreateMap<User, AuthResponseDto>();
+        CreateMap<User, AuthResponseDto>()
+            .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.Id));
     }
 }
