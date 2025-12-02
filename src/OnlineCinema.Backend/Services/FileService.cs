@@ -1,11 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Http;
-using System;
-using System.IO;
-using System.Threading.Tasks;
-
-namespace OnlineCinema.Backend.Services;
+﻿namespace OnlineCinema.Backend.Services;
 
 public class FileService : IFileService
 {

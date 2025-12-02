@@ -56,7 +56,6 @@ public class UserActionService : IUserActionService
         if (existingRating != null)
         {
             existingRating.RatingValue = dto.Rating;
-            existingRating.Review = dto.Review;
             existingRating.UpdatedAt = DateTime.UtcNow;
         }
         else
@@ -66,7 +65,6 @@ public class UserActionService : IUserActionService
                 UserId = userId,
                 MovieId = dto.MovieId,
                 RatingValue = dto.Rating,
-                Review = dto.Review,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -91,10 +89,5 @@ public class UserActionService : IUserActionService
         var userMovieStatuses = await query.ToListAsync();
 
         return _mapper.Map<IEnumerable<UserMovieDto>>(userMovieStatuses);
-    }
-
-    Task<IEnumerable<UserMovieDto>> IUserActionService.GetUserMoviesAsync(int userId, string? statusStr)
-    {
-        throw new NotImplementedException();
     }
 }

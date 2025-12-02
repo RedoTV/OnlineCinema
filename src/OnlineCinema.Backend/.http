@@ -1,6 +1,7 @@
 ### Variables
 @baseUrl = http://localhost:5000
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJhZG1pbjFAb25saW5lY2luZW1hLmNvbSIsInVzZXJuYW1lIjoiYWRtaW4xIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiQWRtaW4iLCJleHAiOjE3NjQ2MTgyODgsImlzcyI6Ik9ubGluZUNpbmVtYSIsImF1ZCI6Ik9ubGluZUNpbmVtYVVzZXJzIn0.v6vsQJfhzHG-Ue9Tu9zZ4nK-hgxPdD4WfGiUP1XmaKA
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJhZG1pbjFAb25saW5lY2luZW1hLmNvbSIsInVzZXJuYW1lIjoiYWRtaW4xIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiQWRtaW4iLCJleHAiOjE3NjQ2NzUzNTcsImlzcyI6Ik9ubGluZUNpbmVtYSIsImF1ZCI6Ik9ubGluZUNpbmVtYVVzZXJzIn0.AeVfHR99GCg_wtWiyd2sbF2qrDpj0y0wCH8DMts12hc
+
 
 ### ============================================
 ### AUTH - Регистрация
@@ -172,17 +173,15 @@ Authorization: Bearer {{token}}
 ### ============================================
 
 GET {{baseUrl}}/api/Genres
-Authorization: Bearer {{token}}
 
 ### ============================================
 ### GENRES - Получение жанра по ID
 ### ============================================
 
 GET {{baseUrl}}/api/Genres/1
-Authorization: Bearer {{token}}
 
 ### ============================================
-### GENRES - Обновление жанра
+### GENRES - Обновление жанра (БЕЗ description)
 ### ============================================
 
 PUT {{baseUrl}}/api/Genres/1
@@ -190,8 +189,7 @@ Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "name": "Боевик",
-  "description": "Жанр кино с динамичным сюжетом, погонями и спецэффектами"
+  "name": "Боевик"
 }
 
 ###
@@ -201,8 +199,7 @@ Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "name": "Драма",
-  "description": "Серьёзные фильмы о жизненных конфликтах и эмоциях"
+  "name": "Драма"
 }
 
 ### ============================================
@@ -351,14 +348,12 @@ Authorization: Bearer {{token}}
 ### ============================================
 
 GET {{baseUrl}}/api/Actors
-Authorization: Bearer {{token}}
 
 ### ============================================
 ### ACTORS - Получение актёра по ID
 ### ============================================
 
 GET {{baseUrl}}/api/Actors/1
-Authorization: Bearer {{token}}
 
 ### ============================================
 ### ACTORS - Обновление актёра
@@ -371,7 +366,7 @@ Authorization: Bearer {{token}}
 {
   "firstName": "Киану",
   "lastName": "Ривз",
-  "birthDate": "1964-09-02T00:00:00",
+  "birthDate": "1964-09-02",
   "biography": "Канадский актёр, известный ролями в фильмах 'Матрица' и 'Джон Уик'"
 }
 
@@ -384,31 +379,9 @@ Authorization: Bearer {{token}}
 {
   "firstName": "Леонардо",
   "lastName": "ДиКаприо",
-  "birthDate": "1974-11-11T00:00:00",
+  "birthDate": "1974-11-11",
   "biography": "Американский актёр и продюсер, обладатель премии 'Оскар'"
 }
-
-### ============================================
-### ACTORS - Загрузка фото (требуется файл)
-### ============================================
-
-POST {{baseUrl}}/api/Actors/1/upload-photo
-Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
-Authorization: Bearer {{token}}
-
-------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="file"; filename="keanu.jpg"
-Content-Type: image/jpeg
-
-< ./path/to/keanu.jpg
-------WebKitFormBoundary7MA4YWxkTrZu0gW--
-  
-### ============================================
-### ACTORS - Удаление актёра
-### ============================================
-
-DELETE {{baseUrl}}/api/Actors/12
-Authorization: Bearer {{token}}
 
 ### ============================================
 ### MOVIES - Создание фильмов
@@ -597,50 +570,42 @@ Authorization: Bearer {{token}}
 ### ============================================
 
 GET {{baseUrl}}/api/Movies
-Authorization: Bearer {{token}}
 
 ### ============================================
 ### MOVIES - Поиск фильмов
 ### ============================================
 
 GET {{baseUrl}}/api/Movies?search=Джон
-Authorization: Bearer {{token}}
 
 ###
 
 GET {{baseUrl}}/api/Movies?search=Начало
-Authorization: Bearer {{token}}
 
 ### ============================================
 ### MOVIES - Фильтрация по жанру
 ### ============================================
 
 GET {{baseUrl}}/api/Movies?genreId=1
-Authorization: Bearer {{token}}
 
 ###
 
 GET {{baseUrl}}/api/Movies?genreId=2
-Authorization: Bearer {{token}}
 
 ### ============================================
 ### MOVIES - Комбинированный поиск
 ### ============================================
 
 GET {{baseUrl}}/api/Movies?search=лебедь&genreId=2
-Authorization: Bearer {{token}}
 
 ### ============================================
 ### MOVIES - Получение фильма по ID
 ### ============================================
 
 GET {{baseUrl}}/api/Movies/1
-Authorization: Bearer {{token}}
 
 ###
 
 GET {{baseUrl}}/api/Movies/3
-Authorization: Bearer {{token}}
 
 ### ============================================
 ### MOVIES - Обновление фильма
@@ -675,33 +640,173 @@ Authorization: Bearer {{token}}
 }
 
 ### ============================================
-### MOVIES - Загрузка постера
+### MOVIES - Загрузка видео (Распределение по ID)
 ### ============================================
 
-POST {{baseUrl}}/api/Movies/1/upload-poster
-Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
-Authorization: Bearer {{token}}
-
-------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="file"; filename="john_wick_poster.jpg"
-Content-Type: image/jpeg
-
-< ./path/to/poster.jpg
-------WebKitFormBoundary7MA4YWxkTrZu0gW--
-
-### ============================================
-### MOVIES - Загрузка видео
-### ============================================
-
+# Фильм 1: Джон Уик -> John_Wick.mp4
 POST {{baseUrl}}/api/Movies/1/upload-video
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
 Authorization: Bearer {{token}}
 
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="file"; filename="movie.mp4"
+Content-Disposition: form-data; name="file"; filename="John_Wick.mp4"
 Content-Type: video/mp4
 
-< ./path/to/movie.mp4
+< ./samples/films/John_Wick.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 2: Начало -> Inception.mp4
+POST {{baseUrl}}/api/Movies/2/upload-video
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="Interception.mp4"
+Content-Type: video/mp4
+
+< ./samples/films/Interception.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 3: Мстители -> Avengers.mp4
+POST {{baseUrl}}/api/Movies/3/upload-video
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="Avengers.mp4"
+Content-Type: video/mp4
+
+< ./samples/films/Avengers.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 4: Форрест Гамп -> Inception.mp4 (заглушка)
+POST {{baseUrl}}/api/Movies/4/upload-video
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="Interception.mp4"
+Content-Type: video/mp4
+
+< ./samples/films/Interception.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 5: Барби -> John_Wick.mp4 (заглушка)
+POST {{baseUrl}}/api/Movies/5/upload-video
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="John_Wick.mp4"
+Content-Type: video/mp4
+
+< ./samples/films/John_Wick.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 6: Бойцовский клуб -> Avengers.mp4 (заглушка)
+POST {{baseUrl}}/api/Movies/6/upload-video
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="Avengers.mp4"
+Content-Type: video/mp4
+
+< ./samples/films/Avengers.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 7: Тёмный рыцарь -> Inception.mp4 (заглушка)
+POST {{baseUrl}}/api/Movies/7/upload-video
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="Inception.mp4"
+Content-Type: video/mp4
+
+< ./samples/films/Interception.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 8: Чёрный лебедь -> John_Wick.mp4 (заглушка)
+POST {{baseUrl}}/api/Movies/8/upload-video
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="John_Wick.mp4"
+Content-Type: video/mp4
+
+< ./samples/films/John_Wick.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 9: Драйв -> Avengers.mp4 (заглушка)
+POST {{baseUrl}}/api/Movies/9/upload-video
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="Avengers.mp4"
+Content-Type: video/mp4
+
+< ./samples/films/Avengers.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 10: Логан -> Inception.mp4 (заглушка)
+POST {{baseUrl}}/api/Movies/10/upload-video
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="Interception.mp4"
+Content-Type: video/mp4
+
+< ./samples/films/Interception.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 11: Ла-Ла Ленд -> John_Wick.mp4 (заглушка)
+POST {{baseUrl}}/api/Movies/11/upload-video
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="John_Wick.mp4"
+Content-Type: video/mp4
+
+< ./samples/films/John_Wick.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 12: Интерстеллар -> Avengers.mp4 (заглушка)
+POST {{baseUrl}}/api/Movies/12/upload-video
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="Avengers.mp4"
+Content-Type: video/mp4
+
+< ./samples/films/Avengers.mp4
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 ### ============================================
@@ -721,7 +826,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 1,
-  "status": "watching"
+  "status": "Watching"
 }
 
 ###
@@ -732,7 +837,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 2,
-  "status": "completed"
+  "status": "Watched"
 }
 
 ###
@@ -743,7 +848,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 3,
-  "status": "plan_to_watch"
+  "status": "Planned"
 }
 
 ###
@@ -754,7 +859,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 4,
-  "status": "completed"
+  "status": "Watched"
 }
 
 ###
@@ -765,7 +870,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 5,
-  "status": "watching"
+  "status": "Watching"
 }
 
 ###
@@ -776,7 +881,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 7,
-  "status": "completed"
+  "status": "Favorite"
 }
 
 ### ============================================
@@ -786,19 +891,18 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/UserActions/my-movies
 Authorization: Bearer {{token}}
 
-###
 
-GET {{baseUrl}}/api/UserActions/my-movies?status=watching
+GET {{baseUrl}}/api/UserActions/my-movies?status=Watched
 Authorization: Bearer {{token}}
 
 ###
 
-GET {{baseUrl}}/api/UserActions/my-movies?status=completed
+GET {{baseUrl}}/api/UserActions/my-movies?status=Planned
 Authorization: Bearer {{token}}
 
 ###
 
-GET {{baseUrl}}/api/UserActions/my-movies?status=plan_to_watch
+GET {{baseUrl}}/api/UserActions/my-movies?status=Favorite
 Authorization: Bearer {{token}}
 
 ### ============================================
@@ -811,8 +915,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 1,
-  "rating": 10,
-  "review": "Шедевр боевика! Киану Ривз в лучшей роли. Хореография боёв на высочайшем уровне."
+  "rating": 9
 }
 
 ###
@@ -823,8 +926,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 2,
-  "rating": 9,
-  "review": "Невероятная задумка и исполнение. Каждый раз пересматриваю и нахожу новые детали."
+  "rating": 9
 }
 
 ###
@@ -835,8 +937,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 4,
-  "rating": 10,
-  "review": "Трогательная и вдохновляющая история. Том Хэнкс великолепен!"
+  "rating": 10
 }
 
 ###
@@ -847,8 +948,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 5,
-  "rating": 8,
-  "review": "Яркий, весёлый и неожиданно глубокий фильм. Отличное летнее кино."
+  "rating": 8
 }
 
 ###
@@ -859,8 +959,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 6,
-  "rating": 9,
-  "review": "Культовая классика. Брэд Питт и сюжет с поворотами - всё на своих местах."
+  "rating": 9
 }
 
 ###
@@ -871,8 +970,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 7,
-  "rating": 10,
-  "review": "Лучший фильм про супергероев. Хит Леджер создал легендарного Джокера."
+  "rating": 10
 }
 
 ###
@@ -883,8 +981,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 8,
-  "rating": 9,
-  "review": "Психологический триллер высшего класса. Натали Портман блистательна."
+  "rating": 9
 }
 
 ###
@@ -895,8 +992,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 9,
-  "rating": 8,
-  "review": "Стильный нуар с отличным саундтреком. Райан Гослинг в своей стихии."
+  "rating": 8
 }
 
 ###
@@ -907,8 +1003,7 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 10,
-  "rating": 9,
-  "review": "Эмоциональное завершение истории Росомахи. Хью Джекман на высоте."
+  "rating": 9
 }
 
 ###
@@ -919,8 +1014,180 @@ Authorization: Bearer {{token}}
 
 {
   "movieId": 11,
-  "rating": 10,
-  "review": "Волшебный мюзикл о мечтах и любви. Песни застревают в голове надолго!"
+  "rating": 10
 }
+
+###
+
+
+### ============================================
+### MOVIES - Загрузка постеров
+### ============================================
+
+# Фильм 1: Джон Уик
+POST {{baseUrl}}/api/Movies/1/upload-poster
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="dzhon-uik.jpg"
+Content-Type: image/jpeg
+
+< ./samples/posters/dzhon-uik.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 2: Начало
+POST {{baseUrl}}/api/Movies/2/upload-poster
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="begin.jpeg"
+Content-Type: image/jpeg
+
+< ./samples/posters/begin.jpeg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 3: Мстители: Финал
+POST {{baseUrl}}/api/Movies/3/upload-poster
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="mstiteli-final.jpg"
+Content-Type: image/jpeg
+
+< ./samples/posters/mstiteli-final.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 4: Форрест Гамп
+POST {{baseUrl}}/api/Movies/4/upload-poster
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="forest_gump.jpg"
+Content-Type: image/jpeg
+
+< ./samples/posters/forest_gump.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 5: Барби
+POST {{baseUrl}}/api/Movies/5/upload-poster
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="barbie.jpg"
+Content-Type: image/jpeg
+
+< ./samples/posters/barbie.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 6: Бойцовский клуб
+POST {{baseUrl}}/api/Movies/6/upload-poster
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="fight_club.jpg"
+Content-Type: image/jpeg
+
+< ./samples/posters/fight_club.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 7: Тёмный рыцарь
+POST {{baseUrl}}/api/Movies/7/upload-poster
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="black_knight.jpeg"
+Content-Type: image/jpeg
+
+< ./samples/posters/black_knight.jpeg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 8: Чёрный лебедь
+POST {{baseUrl}}/api/Movies/8/upload-poster
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="black_leb.jpg"
+Content-Type: image/jpeg
+
+< ./samples/posters/black_leb.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 9: Драйв
+POST {{baseUrl}}/api/Movies/9/upload-poster
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="draiv.jpg"
+Content-Type: image/jpeg
+
+< ./samples/posters/draiv.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 10: Логан
+POST {{baseUrl}}/api/Movies/10/upload-poster
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="logan.jpg"
+Content-Type: image/jpeg
+
+< ./samples/posters/logan.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 11: Ла-Ла Ленд
+POST {{baseUrl}}/api/Movies/11/upload-poster
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="la-la-lend.jpg"
+Content-Type: image/jpeg
+
+< ./samples/posters/la-la-lend.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# Фильм 12: Интерстеллар
+POST {{baseUrl}}/api/Movies/12/upload-poster
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="interstellar.png"
+Content-Type: image/png
+
+< ./samples/posters/interstellar.png
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 ###

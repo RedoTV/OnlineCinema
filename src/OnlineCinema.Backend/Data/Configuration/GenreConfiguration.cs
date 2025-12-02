@@ -11,6 +11,5 @@ public class GenreConfiguration : IEntityTypeConfiguration<Genre>
         builder.HasKey(e => e.Id);
         builder.HasIndex(e => e.Name).IsUnique();
         builder.Property(e => e.Name).HasMaxLength(50).IsRequired();
-        builder.Property(e => e.Description).HasColumnType("text");
     }
 }

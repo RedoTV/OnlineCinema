@@ -2,6 +2,15 @@ import React, { useEffect, useState, useContext } from 'react';
 import { api } from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 
+// Словарь для русских названий статусов
+const statusLabel = {
+  Planned: 'В планах',
+  Watched: 'Просмотрено',
+  Favorite: 'Избранное',
+};
+
+const allStatuses = ['Planned', 'Watched', 'Favorite'];
+
 export const ProfilePage = () => {
   const { user, logout } = useContext(AuthContext);
   const [myMovies, setMyMovies] = useState([]);
@@ -20,6 +29,13 @@ export const ProfilePage = () => {
     if (user) fetchMyMovies();
   }, [user, filterStatus]);
 
+  const updateStatus = async (movieId, status) => {
+    await api.post('/UserActions/status', { movieId, status });
+    const params = filterStatus ? `?status=${filterStatus}` : '';
+    const res = await api.get(`/UserActions/my-movies${params}`);
+    setMyMovies(res.data);
+  };
+
   if (!user) return <div className="text-xl font-bold">Требуется вход в систему.</div>;
 
   return (
@@ -34,23 +50,23 @@ export const ProfilePage = () => {
         </button>
       </div>
 
-      {/* Фильтры в виде табов */}
+      {/* Фильтры в виде табов, показываем русские подписи */}
       <div className="flex flex-wrap gap-4 mb-8">
-        {['', 'Planned', 'Watched', 'Favorite'].map(status => (
+        {['', ...allStatuses].map(status => (
           <button
             key={status}
             onClick={() => setFilterStatus(status)}
             className={`px-6 py-2 border-2 border-black font-bold uppercase transition-all ${filterStatus === status
-                ? 'bg-black text-white'
-                : 'hover:bg-gray-100'
+              ? 'bg-black text-white'
+              : 'hover:bg-gray-100'
               }`}
           >
-            {status === '' ? 'ВСЕ' : status}
+            {status === '' ? 'ВСЕ' : statusLabel[status]}
           </button>
         ))}
       </div>
 
-      {/* Список фильмов - строгий список */}
+      {/* Список фильмов — строгий список с управлением статусом */}
       <div className="space-y-4">
         {myMovies.length === 0 ? (
           <p className="text-lg italic text-gray-500">Список пуст</p>
@@ -64,9 +80,17 @@ export const ProfilePage = () => {
               />
               <div className="flex-1">
                 <h4 className="font-bold text-lg">{m.movieTitle}</h4>
-                <span className="text-sm font-medium border border-black px-2 py-0.5 bg-white inline-block mt-1">
-                  {m.status}
+                <span className="text-sm font-medium border border-black px-2 py-0.5 bg-white inline-block mt-1 mr-3">
+                  {statusLabel[m.status] ?? m.status}
                 </span>
+                <select
+                  className="text-sm border-2 border-black px-2 py-0.5"
+                  value={m.status}
+                  onChange={(e) => updateStatus(m.movieId, e.target.value)}
+                  style={{ marginLeft: '10px' }}
+                >
+                  {allStatuses.map(s => <option key={s} value={s}>{statusLabel[s]}</option>)}
+                </select>
               </div>
             </div>
           ))

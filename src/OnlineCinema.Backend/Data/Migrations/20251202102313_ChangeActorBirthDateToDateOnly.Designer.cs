@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OnlineCinema.Backend.Data;
@@ -11,9 +12,11 @@ using OnlineCinema.Backend.Data;
 namespace OnlineCinema.Backend.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251202102313_ChangeActorBirthDateToDateOnly")]
+    partial class ChangeActorBirthDateToDateOnly
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -186,6 +189,9 @@ namespace OnlineCinema.Backend.Data.Migrations
                     b.Property<int>("RatingValue")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Review")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -271,8 +277,8 @@ namespace OnlineCinema.Backend.Data.Migrations
                             Email = "admin1@onlinecinema.com",
                             FirstName = "Admin",
                             LastName = "One",
-                            PasswordHash = "xsv+d7xzxiGzAdGbbcLfHEE02RE=",
-                            PasswordSalt = "m4srpMDEA0fOGKbS7Kvj7A==",
+                            PasswordHash = "bstXX+QdN7+MRavzQNwajhKd2ko=",
+                            PasswordSalt = "4QzCu2ff02Vx1Gc7xucnXQ==",
                             Role = "Admin",
                             UpdatedAt = new DateTime(2025, 11, 22, 20, 22, 53, 0, DateTimeKind.Utc),
                             Username = "admin1"
@@ -284,8 +290,8 @@ namespace OnlineCinema.Backend.Data.Migrations
                             Email = "admin2@onlinecinema.com",
                             FirstName = "Admin",
                             LastName = "Two",
-                            PasswordHash = "xBufb4AHJSN/ULsQWqaIK92KWc0=",
-                            PasswordSalt = "Oic1Keqplc8K7yeRYIFwqQ==",
+                            PasswordHash = "JBM9kZZk1OAux7SaVPkWcZgSqCQ=",
+                            PasswordSalt = "77vZXzleDE7hwM5UKvBwfQ==",
                             Role = "Admin",
                             UpdatedAt = new DateTime(2025, 11, 22, 20, 22, 53, 0, DateTimeKind.Utc),
                             Username = "admin2"
@@ -297,8 +303,8 @@ namespace OnlineCinema.Backend.Data.Migrations
                             Email = "admin3@onlinecinema.com",
                             FirstName = "Admin",
                             LastName = "Three",
-                            PasswordHash = "1O6BAFjP65a/1B4uUKL2p3BWw6c=",
-                            PasswordSalt = "xfUEc/UtoRtw5Q+weiRdTw==",
+                            PasswordHash = "eyMUTbYMlnbZ9x2tR0QKgSY+2Ec=",
+                            PasswordSalt = "VqJgjY923A6m4gk+rUOGhQ==",
                             Role = "Admin",
                             UpdatedAt = new DateTime(2025, 11, 22, 20, 22, 53, 0, DateTimeKind.Utc),
                             Username = "admin3"

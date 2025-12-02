@@ -11,6 +11,7 @@ public class ActorConfiguration : IEntityTypeConfiguration<Actor>
         builder.HasKey(e => e.Id);
         builder.Property(e => e.FirstName).HasMaxLength(50).IsRequired();
         builder.Property(e => e.LastName).HasMaxLength(50).IsRequired();
+        builder.Property(e => e.BirthDate).HasColumnType("date");
         builder.Property(e => e.PhotoLocalPath).HasMaxLength(500);
         builder.Property(e => e.PhotoUrl).HasMaxLength(500);
         builder.Property(e => e.Biography).HasColumnType("text");
