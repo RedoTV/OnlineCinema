@@ -15,6 +15,17 @@ export const SeriesPage = () => {
   const [streamUrl, setStreamUrl] = useState(null);
   const [activeEpisode, setActiveEpisode] = useState(null);
   const [initialPosition, setInitialPosition] = useState(0);
+  const [myRating, setMyRating] = useState(8);
+
+  const handleRate = async () => {
+    try {
+      await api.post('/UserActions/rating', { movieId: null, seriesId: Number(id), rating: Number(myRating) });
+      const sd = await api.get(`/Series/${id}`);
+      setSeries(sd.data);
+    } catch (e) {
+      console.error('rating failed', e);
+    }
+  };
 
   // список
   useEffect(() => {
@@ -100,6 +111,23 @@ export const SeriesPage = () => {
       )}
 
       <p className="text-lg leading-relaxed mb-6">{series.description}</p>
+
+      {user && (
+        <div className="flex items-center gap-3 mb-6 border-2 border-black p-2 w-fit">
+          <span className="font-bold">Ваша оценка сериала:</span>
+          <select
+            value={myRating}
+            onChange={(e) => setMyRating(e.target.value)}
+            className="border-2 border-black px-2 py-0.5"
+          >
+            {[...Array(10)].map((_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
+          </select>
+          <button onClick={handleRate} className="border-2 border-black px-3 py-0.5 font-bold hover:bg-black hover:text-white">
+            Поставить
+          </button>
+          <span className="text-sm text-gray-600">★ {series.averageRating?.toFixed(1)}</span>
+        </div>
+      )}
 
       <div className="space-y-6">
         {series.seasons?.map(season => (
