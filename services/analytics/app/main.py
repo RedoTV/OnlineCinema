@@ -38,6 +38,8 @@ async def lifespan(_app: FastAPI):
     yield
 
     _stop[0] = True
+    from .db import close_pool
+    close_pool()
     log.info("Analytics завершает работу")
 
 

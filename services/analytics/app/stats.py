@@ -39,9 +39,9 @@ def genre_mix() -> list[dict]:
     """Жанровая разбивка каталога (реальный count из Movies)."""
     q = text(
         """
-        SELECT g."Name" AS genre, COUNT(*) AS cnt
+        SELECT g."Name" AS genre, COUNT(DISTINCT mg."MoviesId") AS cnt
         FROM "Genres" g
-        LEFT JOIN "MovieGenres" mg ON mg."GenreId" = g."Id"
+        LEFT JOIN "MovieGenres" mg ON mg."GenresId" = g."Id"
         GROUP BY g."Name"
         ORDER BY cnt DESC
         """

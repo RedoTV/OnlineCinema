@@ -25,10 +25,12 @@ _engine = create_engine(settings.dsn.replace("postgresql://", "postgresql+psycop
 def _load_catalog() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Читает каталог из .NET-схемы (public) только на чтение."""
     mov = pd.read_sql('SELECT m."Id", m."Title", m."ReleaseYear" FROM "Movies" m', _engine)
+    # join-таблица EF кольцnamится по нативным именам GenreId/MoviesId -
+    # MoviesId здесь и есть id фильма (совпадает с Ratings.MovieId)
     mov_genres = pd.read_sql(
         """
-        SELECT mg."MovieId", g."Name"
-        FROM "MovieGenres" mg JOIN "Genres" g ON g."Id" = mg."GenreId"
+        SELECT mg."MoviesId" AS "MovieId", g."Name"
+        FROM "MovieGenres" mg JOIN "Genres" g ON g."Id" = mg."GenresId"
         """,
         _engine,
     )
@@ -71,6 +73,48 @@ def content_recs(reference_movie_id: int, k: int = 8):
     return out[["Id", "Title", "score"]].to_dict("records")
 
 
+def _content_for_user(user_id: int, mov, mov_genres, ratings, k: int = 10) -> list[dict]:
+    """Ранжируем фильмы по предпочтениям юзера к жанрам (content fallback).
+
+    Берёт жанры из фильмов, которым юзер поставил >=7, и отдаёт недосмотренные
+    фильмы тех же жанров. Падает армией, когда оценок мало или они невысокие.
+    """
+    if user_id not in set(ratings["UserId"].unique()):
+        return []
+    mine = ratings[(ratings["UserId"] == user_id) & (ratings["RatingValue"] >= 7)]
+    if mine.empty:
+        return []
+
+    watched = set(ratings[ratings["UserId"] == user_id]["MovieId"])
+    loved_movie_ids = set(mine["MovieId"])
+    # любимые жанры агрегируем
+    gi = _build_onehot(mov, mov_genres).set_index("Id")
+    fav = gi.loc[[mid for mid in loved_movie_ids if mid in gi.index]]
+    if fav.empty:
+        return []  # любимые фильмы без жанров (маловероятно)
+    genre_weights = fav.iloc[:, :-1].sum(axis=0)  # без Title-колонки
+    genre_weights = genre_weights[genre_weights > 0]
+
+    # скорим все фильмы кроме просмотренных и любимых
+    cands = gi.loc[[mid for mid in gi.index if mid not in watched]]
+    if cands.empty:
+        return []
+    feats = cands.iloc[:, :-1].fillna(0).astype(float)
+    # профиль-вес по жанрам домножаем на признаки
+    score = feats.dot(genre_weights.reindex(feats.columns).fillna(0))
+    ranked = score.sort_values(ascending=False).head(k)
+    titles = mov.set_index("Id")["Title"]
+    return [
+        {
+            "movieId": int(mid),
+            "title": titles.get(mid, ""),
+            "score": round(float(val), 3),
+            "reason": "по твоим любимым жанрам",
+        }
+        for mid, val in ranked.items()
+    ]
+
+
 def _predict_from_matrix(user_id, ratings: pd.DataFrame, n_factors=8):
     """Чистая SVD-функция (без БД) — покрывается юнит-тестом.
 
@@ -107,55 +151,54 @@ def _predict_from_matrix(user_id, ratings: pd.DataFrame, n_factors=8):
 
 
 def hybrid_for_user(user_id: int, k: int = 10) -> list[dict]:
-    """Основной вход из API: смесь коллаб/CB + причины."""
+    """Главный вход API. Колаб + контент, никогда не возвращает пусто.
+
+    Приоритет отдаём коллаборативным (SVD), но если в выборке слишком мало
+    пользователей (у нас свежая БД — такое реально), сползаем на контентный
+    fallback по любимым жанрам юзера, иначе на просто популярные фильмы.
+    """
     mov, mov_genres, ratings = _load_catalog()
 
-    # --- холодный старт: юзер ещё ничего не оценивал → по популярности топ
-    if ratings.empty or user_id not in set(ratings["UserId"].unique()):
+    # юзер ничего не оценивал — холодный старт: топ по средним
+    has_user_history = not ratings.empty and user_id in set(ratings["UserId"].unique())
+    if not has_user_history:
         log.info("Холодный старт юзера %s, отдаю по средним оценкам", user_id)
+        if ratings.empty:
+            return []  # совсем пустая база — рекомендаций неоткуда взять
         avg = ratings.groupby("MovieId")["RatingValue"].mean()
         top = avg.sort_values(ascending=False).head(k).index
         titles = mov.set_index("Id")["Title"]
         return [
-            {"movieId": int(i), "title": titles.get(i, ""), "score": float(avg[i])}
+            {"movieId": int(i), "title": titles.get(i, ""), "score": float(avg[i]),
+             "reason": "популярно у других"}
             for i in top
+            if i in titles.index
         ]
 
-    # --- есть история: SVD достраивает незасмотренные
-    pivot = ratings.pivot_table(index="UserId", columns="MovieId", values="RatingValue")
-    from sklearn.decomposition import TruncatedSVD
-    from sklearn.preprocessing import normalize
+    collab = _predict_from_matrix(user_id, ratings)
 
-    # нечитанные = NaN; берём среднее по столбцу чтобы SVD не падал
-    filled = pivot.T.fillna(pivot.mean(axis=1)).T
-    filled = filled.sub(filled.mean(axis=1), axis=0)  # центрируем
-    n_factors = min(8, filled.shape[1] - 1, filled.shape[0] - 1)
-    if n_factors < 2:
-        return []
-    svd = TruncatedSVD(n_components=n_factors, random_state=42)
-    U = svd.fit_transform(filled)
-    sigma = svd.singular_values_
-    Vt = svd.components_
-    # реконструкция рейтинга для всех фильмов для этого юзера
-    pred = (U[filled.index.get_loc(user_id)] * sigma) @ Vt
-    cols = list(filled.columns)
-    user_watched = set(cols[i] for i in range(len(cols)) if not pd.isna(pivot.loc[user_id, cols[i]]) if user_id in pivot.index)
+    if len(collab) >= k:
+        # коллаборатив дал норм кандидатов — используем как есть
+        titles = mov.set_index("Id")["Title"]
+        return [
+            {"movieId": it["movieId"], "title": titles.get(it["movieId"], ""),
+             "score": round(it["score"], 3), "reason": "похоже на то, что ты смотрел"}
+            for it in collab[:k]
+            if it["movieId"] in titles.index
+        ]
 
-    res = [
-        {"movieId": cols[i], "score": float(pred[i])}
-        for i in range(len(cols))
-        if cols[i] not in user_watched and not pd.isna(pred[i])
-    ]
-    res.sort(key=lambda x: x["score"], reverse=True)
+    # мало пользователей — добор контентом, потом только популярным
+    content = _content_for_user(user_id, mov, mov_genres, ratings, k=k)
+    if content:
+        return content
+
+    avg = ratings.groupby("MovieId")["RatingValue"].mean()
+    top = avg.sort_values(ascending=False).head(k).index
     titles = mov.set_index("Id")["Title"]
-    out = []
-    for it in res[:k]:
-        out.append(
-            {
-                "movieId": it["movieId"],
-                "title": titles.get(it["movieId"], ""),
-                "score": round(it["score"], 3),
-                "reason": "похоже на то, что ты смотрел",
-            }
-        )
-    return out
+    watched = set(ratings[ratings["UserId"] == user_id]["MovieId"])
+    return [
+        {"movieId": int(i), "title": titles.get(i, ""), "score": float(avg[i]),
+         "reason": "популярно у других"}
+        for i in top
+        if i in titles.index and i not in watched
+    ]

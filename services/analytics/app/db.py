@@ -18,8 +18,22 @@ def get_conn():
     return _pool.connection()
 
 
+def open_pool():
+    """Поднимаем пул пулов соединений один раз после того как БД доступна."""
+    if _pool.closed:
+        _pool.open()
+        _pool.wait()  # прогреть минимум коннектов
+
+
+def close_pool():
+    if not _pool.closed:
+        _pool.close()
+
+
 def init_schema() -> None:
     """Создаёт схему analytics и таблицы, если их нет."""
+    # сначала активный пул для событийного консьюмера, потом — DDL через прямой коннект
+    open_pool()
     with psycopg.connect(settings.dsn) as conn:
         with conn.cursor() as cur:
             cur.execute(f'CREATE SCHEMA IF NOT EXISTS "{settings.pg_schema}"')
