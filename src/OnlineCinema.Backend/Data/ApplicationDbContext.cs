@@ -18,6 +18,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Season> Seasons { get; set; }
     public DbSet<Episode> Episodes { get; set; }
     public DbSet<PlaybackProgress> PlaybackProgresses { get; set; }
+    public DbSet<Comment> Comments { get; set; }
+    public DbSet<CommentLike> CommentLikes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
