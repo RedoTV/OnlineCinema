@@ -6,6 +6,7 @@ import { AuthContext } from '../context/AuthContext';
 export const MoviePage = () => {
   const { id } = useParams();
   const [movie, setMovie] = useState(null);
+  const [streamUrl, setStreamUrl] = useState(null);
   const { user } = useContext(AuthContext);
 
   const [actionStatus, setActionStatus] = useState({ message: '', type: '' });
@@ -17,6 +18,11 @@ export const MoviePage = () => {
     api.get(`/Movies/${id}`)
       .then(res => setMovie(res.data))
       .catch(() => setActionStatus({ message: 'Не удалось загрузить фильм', type: 'error' }));
+
+    // presigned URL для стриминга, чтобы не гонять байты через бэкенд
+    api.get(`/Streaming/movie/${id}`)
+      .then(res => setStreamUrl(res.data.url))
+      .catch(() => {});
   }, [id]);
 
   const handleSetStatus = async (status) => {
@@ -51,7 +57,7 @@ export const MoviePage = () => {
 
       <div className="mb-8 border-2 border-black p-1 bg-black">
         <video controls className="w-full aspect-video bg-black outline-none">
-          <source src={`http://localhost:5000${movie.videoUrl}`} type="video/mp4" />
+          {streamUrl && <source src={streamUrl} type="video/mp4" />}
           Ваш браузер не поддерживает видео.
         </video>
       </div>

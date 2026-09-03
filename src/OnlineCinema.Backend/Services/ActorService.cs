@@ -10,13 +10,13 @@ public class ActorService : IActorService
 {
     private readonly ApplicationDbContext _context;
     private readonly IMapper _mapper;
-    private readonly IFileService _fileService;
+    private readonly IStorageService _storage;
 
-    public ActorService(ApplicationDbContext context, IMapper mapper, IFileService fileService)
+    public ActorService(ApplicationDbContext context, IMapper mapper, IStorageService storage)
     {
         _context = context;
         _mapper = mapper;
-        _fileService = fileService;
+        _storage = storage;
     }
 
     public async Task<IEnumerable<ActorDto>> GetAllAsync()
@@ -57,12 +57,12 @@ public class ActorService : IActorService
     {
         var actor = await _context.Actors.FindAsync(id) ?? throw new KeyNotFoundException($"Actor with ID {id} not found");
 
-        if (!string.IsNullOrEmpty(actor.PhotoUrl))
-        {
-            _fileService.DeleteFile(actor.PhotoUrl);
-        }
+        if (!string.IsNullOrEmpty(actor.PhotoUrl) && _storage.TryParseObjectKey(actor.PhotoUrl, out var oldKey))
+            await _storage.DeleteAsync(oldKey);
 
-        actor.PhotoUrl = await _fileService.SaveFileAsync(file, "actors");
+        var key = $"actors/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+        await using var stream = file.OpenReadStream();
+        actor.PhotoUrl = await _storage.SaveAsync(stream, key, file.ContentType);
         await _context.SaveChangesAsync();
 
         return actor.PhotoUrl;
@@ -73,7 +73,7 @@ public class ActorService : IActorService
         var actor = await _context.Actors.FindAsync(id);
         if (actor == null) throw new KeyNotFoundException($"Actor with ID {id} not found");
 
-        _fileService.DeleteFile(actor.PhotoUrl);
+        if (_storage.TryParseObjectKey(actor.PhotoUrl, out var key)) await _storage.DeleteAsync(key);
 
         _context.Actors.Remove(actor);
         await _context.SaveChangesAsync();
