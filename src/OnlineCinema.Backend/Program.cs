@@ -18,6 +18,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IActorService, ActorService>();
 builder.Services.AddScoped<IGenreService, GenreService>();
 builder.Services.AddScoped<IMovieService, MovieService>();
+builder.Services.AddScoped<ISeriesService, SeriesService>();
 builder.Services.AddScoped<IUserActionService, UserActionService>();
 builder.Services.AddSingleton<IStorageService, MinioStorageService>();
 
