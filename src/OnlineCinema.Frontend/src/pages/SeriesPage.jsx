@@ -59,6 +59,17 @@ export const SeriesPage = () => {
     if (pos > 30) setInitialPosition(pos);
   };
 
+  // следующая серия по порядку сезонов (авто-транзишн после конца эпизода)
+  const autoNext = () => {
+    const flat = [];
+    (series?.seasons || []).forEach(s => {
+      (s.episodes || []).forEach(ep => flat.push({ ...ep, seasonNumber: s.seasonNumber }));
+    });
+    const idx = flat.findIndex(e => e.id === activeEpisode?.id);
+    const next = flat[idx + 1];
+    if (next) playEpisode(next);
+  };
+
   // ---- СПИСОК ----
   if (!id) {
     return (
@@ -105,6 +116,7 @@ export const SeriesPage = () => {
             streamUrl={streamUrl}
             episodeId={activeEpisode.id}
             initialPosition={initialPosition}
+            onEnded={autoNext}
           />
           <div className="text-white p-2 font-bold">С{activeEpisode.seasonNumber}E{activeEpisode.episodeNumber} — {activeEpisode.title}</div>
         </div>
