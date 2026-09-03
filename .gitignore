@@ -237,6 +237,18 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# uploaded media / sample binaries (keep repo lean)
+static/
+samples/**/*.mp4
+samples/**/*.mov
+samples/**/*.mkv
+*.mp4
+
 # Typescript v1 declaration files
 typings/
 
