@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, master]
+  pull_request:
+    branches: [develop]
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  NODE_VERSION: '20'
+  REGISTRY_IMAGE_BACKEND: ghcr.io/${{ github.repository }}/backend
+  REGISTRY_IMAGE_FRONTEND: ghcr.io/${{ github.repository }}/frontend
+
+jobs:
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore + build backend
+        run: |
+          dotnet restore src/OnlineCinema.Backend/OnlineCinema.Backend.csproj
+          dotnet build src/OnlineCinema.Backend/OnlineCinema.Backend.csproj -c Release --no-restore
+
+      - name: Restore frontend
+        run: npm ci
+        working-directory: src/OnlineCinema.Frontend
+
+      - name: Lint frontend
+        run: npm run lint
+        working-directory: src/OnlineCinema.Frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: src/OnlineCinema.Frontend
+
+  test-backend:
+    needs: build-backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Run unit tests
+        run: dotnet test tests/OnlineCinema.Backend.Tests -c Release
+
+  smoke:
+    needs: test-backend
+    if: github.ref != 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # репозиторий не хранит .env, делаем его из примера и подменяем секреты
+      - name: Prep .env for CI
+        run: |
+          cp .env.example .env
+          sed -i 's/change_me/ci_secret_value/g' .env
+          sed -i 's/^FRONTEND_URL=.*/FRONTEND_URL=http:\/\/localhost:3000/' .env
+          sed -i 's/^SEED_DEMO_DATA=.*/SEED_DEMO_DATA=true/' .env
+
+      - name: Docker compose up
+        run: docker compose up -d --wait db minio backend frontend
+
+      - name: Run smoke tests
+        run: node scripts/smoke-test.mjs http://localhost:5000/api
+
+      - name: Tear down
+        run: docker compose down -v
+        if: always()

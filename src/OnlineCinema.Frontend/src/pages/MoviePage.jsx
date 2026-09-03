@@ -34,7 +34,7 @@ export const MoviePage = () => {
           if (res.data.positionSeconds > 30) setInitialPosition(res.data.positionSeconds);
         })
         .catch(() => {});
-  }, [id]);
+  }, [id, user]);
 
   const handleSetStatus = async (status) => {
     setActionStatus({ message: 'Сохранение...', type: 'loading' });
