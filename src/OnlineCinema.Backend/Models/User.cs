@@ -14,4 +14,5 @@ public class User
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public ICollection<Rating> Ratings { get; set; } = new List<Rating>();
     public ICollection<UserMovieStatus> UserMovieStatuses { get; set; } = new List<UserMovieStatus>();
+    public ICollection<PlaybackProgress> PlaybackProgresses { get; set; } = new List<PlaybackProgress>();
 }
