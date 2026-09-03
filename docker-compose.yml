@@ -42,7 +42,9 @@ services:
     image: rabbitmq:3.13-management-alpine
     container_name: onlinecinema_rabbitmq
     restart: always
-    # profiles: ["full"]   # v3.0: поднимаем аналитику только явно
+    # profile полный — но rabbit поднимается и в базе, чтобы бэкенд мог пушить события
+    networks:
+      - onlinecinema_network
     ports:
       - "5672:5672"
       - "15672:15672"
