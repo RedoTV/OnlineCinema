@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using OnlineCinema.Backend.Data;
@@ -20,7 +21,11 @@ builder.Services.AddScoped<IMovieService, MovieService>();
 builder.Services.AddScoped<IUserActionService, UserActionService>();
 builder.Services.AddSingleton<IStorageService, MinioStorageService>();
 
-builder.Services.AddAutoMapper(typeof(Program));
+// AutoMapper 16 выпилил DI-экстеншн из основного пакета, регистрирую вручную
+builder.Services.AddSingleton<IMapper>(sp =>
+    new Mapper(new MapperConfiguration(
+        cfg => cfg.AddMaps(typeof(Program).Assembly),
+        sp.GetRequiredService<ILoggerFactory>())));
 
 builder.Services.AddControllers();
 
