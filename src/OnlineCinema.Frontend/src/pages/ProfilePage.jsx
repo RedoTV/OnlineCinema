@@ -74,7 +74,7 @@ export const ProfilePage = () => {
           myMovies.map(m => (
             <div key={m.movieId} className="flex items-center border-2 border-black p-2 hover:bg-gray-50 transition-colors">
               <img
-                src={m.posterUrl ? `http://localhost:5000${m.posterUrl}` : '/placeholder.jpg'}
+                src={m.posterUrl ? `/api/Media/poster/${m.movieId}` : '/placeholder.jpg'}
                 className="w-12 h-16 object-cover border border-black mr-4"
                 alt="poster"
               />

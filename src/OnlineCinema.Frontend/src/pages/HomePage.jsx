@@ -40,7 +40,7 @@ export const HomePage = () => {
             {/* Картинка с черной рамкой снизу */}
             <div className="aspect-[2/3] w-full overflow-hidden border-b-2 border-black group-hover:border-white">
               <img
-                src={movie.posterUrl ? `http://localhost:5000${movie.posterUrl}` : '/placeholder.jpg'}
+                src={movie.posterUrl ? `/api/Media/poster/${movie.id}` : '/placeholder.jpg'}
                 alt={movie.title}
                 className="w-full h-full object-cover"
               />

@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
 using OnlineCinema.Backend.Data;
 using OnlineCinema.Backend.Services;
@@ -16,10 +15,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IActorService, ActorService>();
-builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IGenreService, GenreService>();
 builder.Services.AddScoped<IMovieService, MovieService>();
 builder.Services.AddScoped<IUserActionService, UserActionService>();
+builder.Services.AddSingleton<IStorageService, MinioStorageService>();
 
 builder.Services.AddAutoMapper(typeof(Program));
 
@@ -82,23 +81,9 @@ MigrateDatabase(app);
 app.UseSwagger();
 app.UseSwaggerUI();
 
-var staticPath = Path.Combine(builder.Environment.ContentRootPath, "static");
-if (!Directory.Exists(staticPath))
-{
-    Directory.CreateDirectory(staticPath);
-}
-
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(staticPath),
-    RequestPath = "/static"
-});
-
-
+app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.UseCors("AllowFrontend");
 
 app.MapControllers();
 

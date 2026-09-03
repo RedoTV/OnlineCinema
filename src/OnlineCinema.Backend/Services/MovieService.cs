@@ -10,13 +10,13 @@ public class MovieService : IMovieService
 {
     private readonly ApplicationDbContext _context;
     private readonly IMapper _mapper;
-    private readonly IFileService _fileService;
+    private readonly IStorageService _storage;
 
-    public MovieService(ApplicationDbContext context, IMapper mapper, IFileService fileService)
+    public MovieService(ApplicationDbContext context, IMapper mapper, IStorageService storage)
     {
         _context = context;
         _mapper = mapper;
-        _fileService = fileService;
+        _storage = storage;
     }
 
     public async Task<IEnumerable<MovieDto>> GetAllAsync(string? search, int? genreId)
@@ -95,8 +95,15 @@ public class MovieService : IMovieService
     public async Task<string> UploadPosterAsync(int id, IFormFile file)
     {
         var movie = await _context.Movies.FindAsync(id) ?? throw new KeyNotFoundException($"Movie with ID {id} not found");
-        if (!string.IsNullOrEmpty(movie.PosterUrl)) _fileService.DeleteFile(movie.PosterUrl);
-        movie.PosterUrl = await _fileService.SaveFileAsync(file, "posters");
+        if (!string.IsNullOrEmpty(movie.PosterUrl) && _storage.TryParseObjectKey(movie.PosterUrl, out var oldKey))
+            await _storage.DeleteAsync(oldKey);
+
+        // Стримим файл прямо в MinIO, не буферизуя в память
+        var ext = Path.GetExtension(file.FileName);
+        var key = $"posters/{Guid.NewGuid()}{ext}";
+        await using var stream = file.OpenReadStream();
+        movie.PosterUrl = await _storage.SaveAsync(stream, key, file.ContentType);
+
         await _context.SaveChangesAsync();
         return movie.PosterUrl;
     }
@@ -104,8 +111,14 @@ public class MovieService : IMovieService
     public async Task<string> UploadVideoAsync(int id, IFormFile file)
     {
         var movie = await _context.Movies.FindAsync(id) ?? throw new KeyNotFoundException($"Movie with ID {id} not found");
-        if (!string.IsNullOrEmpty(movie.VideoUrl)) _fileService.DeleteFile(movie.VideoUrl);
-        movie.VideoUrl = await _fileService.SaveFileAsync(file, "films");
+        if (!string.IsNullOrEmpty(movie.VideoUrl) && _storage.TryParseObjectKey(movie.VideoUrl, out var oldKey))
+            await _storage.DeleteAsync(oldKey);
+
+        var ext = Path.GetExtension(file.FileName);
+        var key = $"films/{Guid.NewGuid()}{ext}";
+        await using var stream = file.OpenReadStream();
+        movie.VideoUrl = await _storage.SaveAsync(stream, key, file.ContentType ?? "video/mp4");
+
         await _context.SaveChangesAsync();
         return movie.VideoUrl;
     }
@@ -113,8 +126,8 @@ public class MovieService : IMovieService
     public async Task DeleteAsync(int id)
     {
         var movie = await _context.Movies.FindAsync(id) ?? throw new KeyNotFoundException($"Movie with ID {id} not found");
-        _fileService.DeleteFile(movie.PosterUrl);
-        _fileService.DeleteFile(movie.VideoUrl);
+        if (_storage.TryParseObjectKey(movie.PosterUrl, out var pKey)) await _storage.DeleteAsync(pKey);
+        if (_storage.TryParseObjectKey(movie.VideoUrl, out var vKey)) await _storage.DeleteAsync(vKey);
         _context.Movies.Remove(movie);
         await _context.SaveChangesAsync();
     }
