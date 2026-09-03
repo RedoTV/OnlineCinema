@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api/axios';
+import { CommentSection } from '../components/CommentSection';
 
 // Страница сериалов: список (без id) или детальная (с id) со сезонами/эпизодами
 export const SeriesPage = () => {
@@ -108,6 +109,8 @@ export const SeriesPage = () => {
           </div>
         ))}
       </div>
+
+      <CommentSection seriesId={Number(id)} />
     </div>
   );
 };
