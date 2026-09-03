@@ -86,6 +86,15 @@ var app = builder.Build();
 
 MigrateDatabase(app);
 
+// SEED_DEMO_DATA=true заполняет базу тестовым контентом для демо/ручной проверки
+if (app.Configuration["SEED_DEMO_DATA"] == "true")
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        await new DemoSeeder(scope.ServiceProvider.GetRequiredService<ApplicationDbContext>()).SeedAsync();
+    }
+}
+
 app.UseSwagger();
 app.UseSwaggerUI();
 

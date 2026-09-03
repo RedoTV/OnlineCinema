@@ -1,0 +1,107 @@
+{
+  "info": {
+    "_postman_id": "onlinecinema-0000-0000-0000-000000000000",
+    "name": "OnlineCinema",
+    "description": "Дипломный проект - API коллекция. Импортируй, задай переменные base_url и token.\n\nУстановка токена:\nPOST /api/Auth/register или /api/Auth/login вернёт { token: '...' }.\nВ среде задай token вручную либо юзай скрипт регистрации на коллекцию.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5000/api", "type": "string" },
+    { "key": "token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.environment.set('token', pm.response.json()?.token ?? '');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"username\": \"demo_user\", \"email\": \"demo@online.local\", \"password\": \"Passw0rd!\", \"firstName\": \"Демо\", \"lastName\": \"Юзер\"}" },
+            "url": { "raw": "{{base_url}}/Auth/register", "host": ["{{base_url}}"], "path": ["Auth", "register"] }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["pm.environment.set('token', pm.response.json()?.token ?? '');"], "type": "text/javascript" }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\": \"demo@online.local\", \"password\": \"Passw0rd!\"}" },
+            "url": { "raw": "{{base_url}}/Auth/login", "host": ["{{base_url}}"], "path": ["Auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Movies",
+      "item": [
+        { "name": "List movies (search/genre)", "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/Movies?search=&genreId=", "host": ["{{base_url}}"], "path": ["Movies"], "query": [{ "key": "search", "value": "" }, { "key": "genreId", "value": "" }] } } },
+        { "name": "Get by id", "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/Movies/1", "host": ["{{base_url}}"], "path": ["Movies", "1"] } } },
+        { "name": "Create movie", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }], "body": { "mode": "raw", "raw": "{\"title\": \"Новый фильм\", \"description\": \"описание\", \"releaseYear\": 2024, \"duration\": 120}" }, "url": { "raw": "{{base_url}}/Movies", "host": ["{{base_url}}"], "path": ["Movies"] } } }
+      ]
+    },
+    {
+      "name": "Series",
+      "item": [
+        { "name": "List series", "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/Series", "host": ["{{base_url}}"], "path": ["Series"] } } },
+        { "name": "Series detail", "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/Series/1", "host": ["{{base_url}}"], "path": ["Series", "1"] } } }
+      ]
+    },
+    {
+      "name": "UserActions",
+      "item": [
+        { "name": "Set status", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }], "body": { "mode": "raw", "raw": "{\"movieId\": 1, \"status\": \"Watched\"}" }, "url": { "raw": "{{base_url}}/UserActions/status", "host": ["{{base_url}}"], "path": ["UserActions", "status"] } } },
+        { "name": "Set rating", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }], "body": { "mode": "raw", "raw": "{\"movieId\": 1, \"rating\": 9}" }, "url": { "raw": "{{base_url}}/UserActions/rating", "host": ["{{base_url}}"], "path": ["UserActions", "rating"] } } },
+        { "name": "My movies", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{base_url}}/UserActions/my-movies", "host": ["{{base_url}}"], "path": ["UserActions", "my-movies"] } } }
+      ]
+    },
+    {
+      "name": "Comments",
+      "item": [
+        { "name": "Add", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }], "body": { "mode": "raw", "raw": "{\"movieId\": 1, \"text\": \"Крутой фильм!\"}" }, "url": { "raw": "{{base_url}}/Comments", "host": ["{{base_url}}"], "path": ["Comments"] } } },
+        { "name": "List", "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/Comments?movieId=1&sort=popular", "host": ["{{base_url}}"], "path": ["Comments"], "query": [{ "key": "movieId", "value": "1" }, { "key": "sort", "value": "popular" }] } } },
+        { "name": "Like", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{base_url}}/Comments/1/like", "host": ["{{base_url}}"], "path": ["Comments", "1", "like"] } } }
+      ]
+    },
+    {
+      "name": "Playback",
+      "item": [
+        { "name": "Save progress", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }], "body": { "mode": "raw", "raw": "{\"movieId\": 1, \"positionSeconds\": 420, \"durationSeconds\": 5400}" }, "url": { "raw": "{{base_url}}/Playback/progress", "host": ["{{base_url}}"], "path": ["Playback", "progress"] } } },
+        { "name": "Get progress", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{base_url}}/Playback/progress?movieId=1", "host": ["{{base_url}}"], "path": ["Playback", "progress"] } } },
+        { "name": "Continue watching", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{base_url}}/Playback/continue-watching", "host": ["{{base_url}}"], "path": ["Playback", "continue-watching"] } } }
+      ]
+    },
+    {
+      "name": "Stats",
+      "item": [
+        { "name": "Top rated", "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/Stats/top-rated?count=5", "host": ["{{base_url}}"], "path": ["Stats", "top-rated"], "query": [{ "key": "count", "value": "5" }] } } },
+        { "name": "Genres", "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/Stats/genres", "host": ["{{base_url}}"], "path": ["Stats", "genres"] } } }
+      ]
+    },
+    {
+      "name": "Media",
+      "item": [
+        { "name": "Movie poster", "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/Media/poster/1", "host": ["{{base_url}}"], "path": ["Media", "poster", "1"] } } },
+        { "name": "Series poster", "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/Media/poster/series/1", "host": ["{{base_url}}"], "path": ["Media", "poster", "series", "1"] } } }
+      ]
+    }
+  ]
+}
