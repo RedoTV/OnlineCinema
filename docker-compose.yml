@@ -89,6 +89,33 @@ services:
     networks:
       - onlinecinema_network
 
+  # v3.0 analytics (Python/FastAPI + uv). Не обязателен в dev — если не нужен,
+  # запусти docker compose up --profile minimal
+  analytics:
+    build:
+      context: ./services/analytics
+      dockerfile: Dockerfile
+    profiles: ["full"]
+    container_name: onlinecinema_analytics
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      PG_HOST: db
+      PG_DB: ${POSTGRES_DB}
+      PG_USER: ${POSTGRES_USER}
+      PG_PASSWORD: ${POSTGRES_PASSWORD}
+      RABBIT_HOST: rabbitmq
+      RABBIT_USER: ${RABBITMQ_USER}
+      RABBIT_PASSWORD: ${RABBITMQ_PASS}
+      RabbitMQ_HOST: rabbitmq
+      CONSUMER_ENABLED: "true"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - onlinecinema_network
+
 volumes:
   postgres_data:
     driver: local
