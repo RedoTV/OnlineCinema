@@ -12,6 +12,7 @@ import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from .db import init_schema
 from .events import consumer_loop
@@ -41,6 +42,14 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="OnlineCinema Analytics", version="0.1.0", lifespan=lifespan)
+
+# dev-фронт ходит напрямую на :8000 во время разработки — открываем корс
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
