@@ -11,6 +11,7 @@ export const Header = () => {
                 <nav className="flex gap-6 font-bold text-lg">
                     <Link to="/" className="hover:underline decoration-2 underline-offset-4">КАТАЛОГ</Link>
                     <Link to="/series" className="hover:underline decoration-2 underline-offset-4">СЕРИАЛЫ</Link>
+                    <Link to="/stats" className="hover:underline decoration-2 underline-offset-4">СТАТИСТИКА</Link>
                     <Link to="/profile" className="hover:underline decoration-2 underline-offset-4">ЛИЧНЫЙ КАБИНЕТ</Link>
                 </nav>
                 {user ? (
