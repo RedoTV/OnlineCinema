@@ -34,4 +34,18 @@ public class StreamingController : ControllerBase
         var url = _storage.GetPresignedUrl(key, 3600);
         return Ok(new { url });
     }
+
+    [HttpGet("episode/{id}")]
+    public async Task<IActionResult> GetEpisodeStreamUrl(int id)
+    {
+        var episode = await _context.Episodes.FindAsync(id);
+        if (episode == null) return NotFound();
+        if (string.IsNullOrEmpty(episode.VideoUrl)) return NotFound("Video not uploaded yet");
+
+        if (!_storage.TryParseObjectKey(episode.VideoUrl, out var key))
+            return BadRequest("Broken video reference");
+
+        var url = _storage.GetPresignedUrl(key, 3600);
+        return Ok(new { url });
+    }
 }

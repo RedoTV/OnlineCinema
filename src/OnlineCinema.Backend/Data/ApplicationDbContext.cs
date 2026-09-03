@@ -14,6 +14,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<Actor> Actors { get; set; }
     public DbSet<Rating> Ratings { get; set; }
     public DbSet<UserMovieStatus> UserMovieStatuses { get; set; }
+    public DbSet<Series> Series { get; set; }
+    public DbSet<Season> Seasons { get; set; }
+    public DbSet<Episode> Episodes { get; set; }
+    public DbSet<PlaybackProgress> PlaybackProgresses { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

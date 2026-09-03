@@ -10,6 +10,7 @@ export const Header = () => {
             <div className="max-w-5xl mx-auto flex justify-between items-center">
                 <nav className="flex gap-6 font-bold text-lg">
                     <Link to="/" className="hover:underline decoration-2 underline-offset-4">КАТАЛОГ</Link>
+                    <Link to="/series" className="hover:underline decoration-2 underline-offset-4">СЕРИАЛЫ</Link>
                     <Link to="/profile" className="hover:underline decoration-2 underline-offset-4">ЛИЧНЫЙ КАБИНЕТ</Link>
                 </nav>
                 {user ? (

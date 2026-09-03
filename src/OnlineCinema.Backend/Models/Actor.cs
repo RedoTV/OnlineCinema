@@ -17,4 +17,5 @@ public class Actor
     public string? Biography { get; set; }
 
     public ICollection<Movie> Movies { get; set; } = new List<Movie>();
+    public ICollection<Series> Series { get; set; } = new List<Series>();
 }

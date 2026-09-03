@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthProvider';
 import { Header } from './Header';
 import { HomePage } from './pages/HomePage';
 import { MoviePage } from './pages/MoviePage';
+import { SeriesPage } from './pages/SeriesPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -16,6 +17,8 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/movie/:id" element={<MoviePage />} />
+            <Route path="/series" element={<SeriesPage />} />
+            <Route path="/series/:id" element={<SeriesPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />

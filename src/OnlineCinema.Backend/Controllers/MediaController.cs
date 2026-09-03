@@ -38,4 +38,14 @@ public class MediaController : ControllerBase
         if (!_storage.TryParseObjectKey(actor.PhotoUrl, out var key)) return BadRequest();
         return Redirect(_storage.GetPresignedUrl(key, 3600));
     }
+
+    [HttpGet("poster/series/{seriesId}")]
+    public async Task<IActionResult> GetSeriesPosterUrl(int seriesId)
+    {
+        var series = await _context.Series.FindAsync(seriesId);
+        if (series == null || string.IsNullOrEmpty(series.PosterUrl)) return NotFound();
+
+        if (!_storage.TryParseObjectKey(series.PosterUrl, out var key)) return BadRequest();
+        return Redirect(_storage.GetPresignedUrl(key, 3600));
+    }
 }
