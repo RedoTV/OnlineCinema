@@ -1,16 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api/axios';
 import { CommentSection } from '../components/CommentSection';
+import { VideoPlayer } from '../components/VideoPlayer';
+import { AuthContext } from '../context/AuthContext';
 
 // Страница сериалов: список (без id) или детальная (с id) со сезонами/эпизодами
 export const SeriesPage = () => {
   const { id } = useParams();
+  const { user } = useContext(AuthContext);
   const [seriesList, setSeriesList] = useState([]);
   const [series, setSeries] = useState(null);
   const [search, setSearch] = useState('');
   const [streamUrl, setStreamUrl] = useState(null);
   const [activeEpisode, setActiveEpisode] = useState(null);
+  const [initialPosition, setInitialPosition] = useState(0);
 
   // список
   useEffect(() => {
@@ -29,11 +33,19 @@ export const SeriesPage = () => {
       .catch(() => {});
   }, [id]);
 
-  const playEpisode = (episode) => {
+  const playEpisode = async (episode) => {
     setActiveEpisode(episode);
-    api.get(`/Streaming/episode/${episode.id}`)
-      .then(res => setStreamUrl(res.data.url))
-      .catch(() => setStreamUrl(null));
+    setInitialPosition(0);
+    setStreamUrl(null);
+
+    const [streamRes, progRes] = await Promise.all([
+      api.get(`/Streaming/episode/${episode.id}`).catch(() => null),
+      user ? api.get(`/Playback/progress?episodeId=${episode.id}`).catch(() => null) : null,
+    ]);
+
+    setStreamUrl(streamRes?.data?.url);
+    const pos = progRes?.data?.positionSeconds || 0;
+    if (pos > 30) setInitialPosition(pos);
   };
 
   // ---- СПИСОК ----
@@ -77,9 +89,12 @@ export const SeriesPage = () => {
 
       {activeEpisode && (
         <div className="mb-6 border-2 border-black p-1 bg-black">
-          <video controls autoPlay className="w-full aspect-video bg-black">
-            {streamUrl && <source src={streamUrl} type="video/mp4" />}
-          </video>
+          <VideoPlayer
+            key={activeEpisode.id}
+            streamUrl={streamUrl}
+            episodeId={activeEpisode.id}
+            initialPosition={initialPosition}
+          />
           <div className="text-white p-2 font-bold">С{activeEpisode.seasonNumber}E{activeEpisode.episodeNumber} — {activeEpisode.title}</div>
         </div>
       )}
