@@ -57,14 +57,17 @@ public class PlaybackService : IPlaybackService
 
     public async Task<IEnumerable<PlaybackProgress>> GetContinueWatchingAsync(int userId)
     {
-        // пока что-то посмотрел, но не досмотрел до конца (осталось больше 5%)
+        // пока что-то посмотрел, но не досмотрел до конца (осталось больше 5%).
+        // включаю вложенные сущности для заголовка в UI.
+#pragma warning disable CS8602 // ложное срабатывание nullable-аназиза Include, связи обязательные
         var items = await _context.PlaybackProgresses
             .Include(p => p.Movie)
-            .Include(p => p.Episode).ThenInclude(e => e.Season).ThenInclude(s => s!.Series)
+            .Include(p => p.Episode).ThenInclude(e => e.Season).ThenInclude(s => s.Series)
             .Where(p => p.UserId == userId && p.DurationSeconds > 0 && p.PositionSeconds / p.DurationSeconds < 0.95)
             .OrderByDescending(p => p.UpdatedAt)
             .Take(20)
             .ToListAsync();
+#pragma warning restore CS8602
 
         return items;
     }
