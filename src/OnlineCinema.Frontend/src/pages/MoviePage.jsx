@@ -3,11 +3,13 @@ import { useParams } from 'react-router-dom';
 import { api } from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { CommentSection } from '../components/CommentSection';
+import { VideoPlayer } from '../components/VideoPlayer';
 
 export const MoviePage = () => {
   const { id } = useParams();
   const [movie, setMovie] = useState(null);
   const [streamUrl, setStreamUrl] = useState(null);
+  const [initialPosition, setInitialPosition] = useState(0);
   const { user } = useContext(AuthContext);
 
   const [actionStatus, setActionStatus] = useState({ message: '', type: '' });
@@ -24,6 +26,14 @@ export const MoviePage = () => {
     api.get(`/Streaming/movie/${id}`)
       .then(res => setStreamUrl(res.data.url))
       .catch(() => {});
+
+    // резюм с места остановки
+    if (user)
+      api.get(`/Playback/progress?movieId=${id}`)
+        .then(res => {
+          if (res.data.positionSeconds > 30) setInitialPosition(res.data.positionSeconds);
+        })
+        .catch(() => {});
   }, [id]);
 
   const handleSetStatus = async (status) => {
@@ -57,10 +67,7 @@ export const MoviePage = () => {
       <h1 className="text-4xl font-black uppercase mb-6 border-l-8 border-black pl-4 leading-none">{movie.title}</h1>
 
       <div className="mb-8 border-2 border-black p-1 bg-black">
-        <video controls className="w-full aspect-video bg-black outline-none">
-          {streamUrl && <source src={streamUrl} type="video/mp4" />}
-          Ваш браузер не поддерживает видео.
-        </video>
+        <VideoPlayer streamUrl={streamUrl} movieId={Number(id)} initialPosition={initialPosition} />
       </div>
 
       <div className="grid md:grid-cols-3 gap-8">

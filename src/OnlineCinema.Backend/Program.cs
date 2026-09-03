@@ -21,6 +21,7 @@ builder.Services.AddScoped<IMovieService, MovieService>();
 builder.Services.AddScoped<ISeriesService, SeriesService>();
 builder.Services.AddScoped<IUserActionService, UserActionService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<IPlaybackService, PlaybackService>();
 builder.Services.AddSingleton<IStorageService, MinioStorageService>();
 
 // AutoMapper 16 выпилил DI-экстеншн из основного пакета, регистрирую вручную
