@@ -5,6 +5,7 @@ using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using OnlineCinema.Backend.Data;
+using OnlineCinema.Backend.Events;
 using OnlineCinema.Backend.Models;
 using OnlineCinema.Backend.Models.DTOs.Auth;
 using OnlineCinema.Backend.Services.Helpers;
@@ -16,12 +17,14 @@ public class AuthService : IAuthService
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly IMapper _mapper;
+    private readonly IEventPublisher _publisher;
 
-    public AuthService(ApplicationDbContext context, IConfiguration configuration, IMapper mapper)
+    public AuthService(ApplicationDbContext context, IConfiguration configuration, IMapper mapper, IEventPublisher publisher)
     {
         _context = context;
         _configuration = configuration;
         _mapper = mapper;
+        _publisher = publisher;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request)
@@ -59,6 +62,14 @@ public class AuthService : IAuthService
         response.Success = true;
         response.Message = "Registration successful";
         response.Token = token;
+
+        await _publisher.PublishAsync("user.registered", new
+        {
+            userId = user.Id,
+            username = user.Username,
+            email = user.Email,
+            happenedAt = DateTime.UtcNow
+        });
 
         return response;
     }

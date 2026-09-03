@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using OnlineCinema.Backend.Data;
+using OnlineCinema.Backend.Events;
 using OnlineCinema.Backend.Models;
 using OnlineCinema.Backend.Models.DTOs.UserActions;
 using OnlineCinema.Backend.Models.Enums;
@@ -11,11 +12,13 @@ public class UserActionService : IUserActionService
 {
     private readonly ApplicationDbContext _context;
     private readonly IMapper _mapper;
+    private readonly IEventPublisher _publisher;
 
-    public UserActionService(ApplicationDbContext context, IMapper mapper)
+    public UserActionService(ApplicationDbContext context, IMapper mapper, IEventPublisher publisher)
     {
         _context = context;
         _mapper = mapper;
+        _publisher = publisher;
     }
 
     public async Task SetStatusAsync(int userId, SetStatusDto dto)
@@ -43,6 +46,15 @@ public class UserActionService : IUserActionService
             _context.UserMovieStatuses.Add(newStatus);
         }
         await _context.SaveChangesAsync();
+
+        // публикуем факт смены статуса (для фидов и аналитики). Статусы пока только у фильмов.
+        await _publisher.PublishAsync("user.status_changed", new
+        {
+            userId,
+            movieId = dto.MovieId,
+            state = dto.Status,
+            happenedAt = DateTime.UtcNow
+        });
     }
 
     public async Task SetRatingAsync(int userId, SetRatingDto dto)
@@ -51,7 +63,7 @@ public class UserActionService : IUserActionService
             throw new ArgumentException("Rating must be between 1 and 10");
 
         var existingRating = await _context.Ratings
-            .FirstOrDefaultAsync(r => r.UserId == userId && r.MovieId == dto.MovieId);
+            .FirstOrDefaultAsync(r => r.UserId == userId && r.MovieId == dto.MovieId && r.SeriesId == dto.SeriesId);
 
         if (existingRating != null)
         {
@@ -64,6 +76,7 @@ public class UserActionService : IUserActionService
             {
                 UserId = userId,
                 MovieId = dto.MovieId,
+                SeriesId = dto.SeriesId,
                 RatingValue = dto.Rating,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -72,6 +85,11 @@ public class UserActionService : IUserActionService
         }
 
         await _context.SaveChangesAsync();
+
+        if (dto.MovieId.HasValue)
+            await _publisher.PublishAsync("movie.rated", new { userId, contentType = "movie", contentId = dto.MovieId, grade = dto.Rating, happenedAt = DateTime.UtcNow });
+        else if (dto.SeriesId.HasValue)
+            await _publisher.PublishAsync("series.rated", new { userId, contentType = "series", contentId = dto.SeriesId, grade = dto.Rating, happenedAt = DateTime.UtcNow });
     }
 
     public async Task<IEnumerable<UserMovieDto>> GetUserMoviesAsync(int userId, string? statusStr)

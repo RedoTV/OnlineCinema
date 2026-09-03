@@ -24,6 +24,9 @@ builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<IPlaybackService, PlaybackService>();
 builder.Services.AddSingleton<IStorageService, MinioStorageService>();
 
+// шина событий (RabbitMQ). Деградирует если брокер недоступен — не валит старт.
+builder.Services.AddSingleton<OnlineCinema.Backend.Events.IEventPublisher, OnlineCinema.Backend.Events.RabbitMqEventPublisher>();
+
 // AutoMapper 16 выпилил DI-экстеншн из основного пакета, регистрирую вручную
 builder.Services.AddSingleton<IMapper>(sp =>
     new Mapper(new MapperConfiguration(

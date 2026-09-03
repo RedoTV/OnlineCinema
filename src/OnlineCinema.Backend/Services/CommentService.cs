@@ -1,4 +1,5 @@
 using OnlineCinema.Backend.Data;
+using OnlineCinema.Backend.Events;
 using OnlineCinema.Backend.Models;
 using OnlineCinema.Backend.Models.DTOs.Comments;
 using Microsoft.EntityFrameworkCore;
@@ -17,10 +18,12 @@ public interface ICommentService
 public class CommentService : ICommentService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IEventPublisher _publisher;
 
-    public CommentService(ApplicationDbContext context)
+    public CommentService(ApplicationDbContext context, IEventPublisher publisher)
     {
         _context = context;
+        _publisher = publisher;
     }
 
     public async Task<IEnumerable<CommentDto>> GetCommentsAsync(int? movieId, int? seriesId, string? sort, int? userId)
@@ -68,6 +71,16 @@ public class CommentService : ICommentService
 
         // подгружаем юзера для ответа
         await _context.Entry(comment).Reference(c => c.User).LoadAsync();
+
+        await _publisher.PublishAsync("comment.created", new
+        {
+            userId,
+            commentId = comment.Id,
+            movieId = comment.MovieId,
+            seriesId = comment.SeriesId,
+            parentId = comment.ParentId,
+            happenedAt = comment.CreatedAt
+        });
         return ToDto(comment, userId);
     }
 

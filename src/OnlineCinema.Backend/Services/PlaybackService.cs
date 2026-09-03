@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using OnlineCinema.Backend.Data;
+using OnlineCinema.Backend.Events;
 using OnlineCinema.Backend.Models;
 
 namespace OnlineCinema.Backend.Services;
@@ -14,10 +15,12 @@ public interface IPlaybackService
 public class PlaybackService : IPlaybackService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IEventPublisher _publisher;
 
-    public PlaybackService(ApplicationDbContext context)
+    public PlaybackService(ApplicationDbContext context, IEventPublisher publisher)
     {
         _context = context;
+        _publisher = publisher;
     }
 
     public async Task SaveProgressAsync(int userId, int? movieId, int? episodeId, double position, double duration)
@@ -45,6 +48,16 @@ public class PlaybackService : IPlaybackService
             });
         }
         await _context.SaveChangesAsync();
+
+        // эвент "досмотрел" публикуем только когда юзер реально дошёл почти до конца
+        // (>=95%), иначе каждый тик прогресса свалится в очередь спамом.
+        if (duration > 0 && position / duration >= 0.95)
+        {
+            if (movieId.HasValue)
+                await _publisher.PublishAsync("movie.watched", new { userId, movieId, watchSeconds = position, happenedAt = DateTime.UtcNow });
+            else if (episodeId.HasValue)
+                await _publisher.PublishAsync("episode.watched", new { userId, episodeId, watchSeconds = position, happenedAt = DateTime.UtcNow });
+        }
     }
 
     public async Task<PlaybackProgress?> GetProgressAsync(int userId, int? movieId, int? episodeId)
