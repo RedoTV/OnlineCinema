@@ -4,6 +4,7 @@ import { Header } from './Header';
 import { HomePage } from './pages/HomePage';
 import { MoviePage } from './pages/MoviePage';
 import { SeriesPage } from './pages/SeriesPage';
+import { StatsPage } from './pages/StatsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -19,6 +20,7 @@ function App() {
             <Route path="/movie/:id" element={<MoviePage />} />
             <Route path="/series" element={<SeriesPage />} />
             <Route path="/series/:id" element={<SeriesPage />} />
+            <Route path="/stats" element={<StatsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
