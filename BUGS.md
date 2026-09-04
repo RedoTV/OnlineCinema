@@ -1,47 +1,36 @@
-# BUGS — v2 coursework demo
+# BUGS — coursework demo validation
 
-Проверено на чистых volumes командой `docker compose down -v --remove-orphans`, затем `docker compose up -d --build`.
+Проверено на чистых volumes: `docker compose down -v --remove-orphans`, затем `docker compose up -d --build`.
 
 ## Исправлено
 
-### BUG-1 — frontend image did not build
-- **Симптом:** Vite 7 падал/предупреждал на Node 18.
-- **Причина:** Vite требует Node >= 20.19.
-- **Фикс:** build stage переведён на `node:22-alpine`, установка сделана воспроизводимой через `npm ci`.
+1. **Frontend image не собирался:** Vite 7 запускался на Node 18. Docker build переведён на Node 22 + `npm ci`.
+2. **nginx падал с `host not found in upstream analytics`:** analytics теперь штатная часть шестисервисного Compose; зависимости запуска заданы явно.
+3. **Постеры и видео не открывались из браузера:** presigned URL содержал внутренний `minio:9000`; замена hostname ломала SigV4. Backend возвращает `/media/...`, nginx сохраняет подписанный Host.
+4. **Range streaming:** nginx раньше не имел media location. Передаются `Range`/`If-Range`, buffering выключен. Подтверждён `206 Partial Content` и корректный Content-Range.
+5. **Неполный demo seed:** добавлены оценки, комментарии, пользователи, MinIO-постеры и недостающие сериалы. Свежая БД содержит 30 фильмов, 9 сериалов, 43 сезона, 304 эпизода, 12 актёров, 8 жанров, 6 оценок и 2 комментария.
+6. **Пустые рекомендации:** SVD на малой выборке мог вернуть `[]`. Добавлены content/popularity/recent-catalog fallbacks; проверено 5 результатов на свежей БД.
+7. **Analytics `PoolClosed`:** psycopg pool открывается до consumer и закрывается в lifespan shutdown.
+8. **Неверные EF join columns:** analytics использует `MoviesId`/`GenresId`, поэтому genre stats и recommender больше не падают.
+9. **RabbitMQ DNS:** broker подключён к общей сети Compose.
+10. **RabbitMQ startup race:** analytics пытался bind queue до создания `cinema.events`. Consumer теперь идемпотентно объявляет durable topic exchange сам.
+11. **Activity 500 без user id:** запросы с фильтром и без фильтра разделены, ambiguous parameter устранён.
+12. **JWT null crash:** обязательный секрет валидируется при старте понятным сообщением.
+13. **Не было frontend Admin Panel:** добавлен защищённый `/admin` в прежней чёрно-белой стилистике: overview, CRUD фильмов/сериалов/актёров/жанров, poster upload, hide/approve/delete comments, ratings table.
+14. **Не хватало admin read API:** добавлены `/api/Admin/dashboard`, `/comments`, `/ratings` под ролью Admin.
 
-### BUG-2 — nginx не отдавал постеры и видео из MinIO
-- **Симптом:** API редиректил браузер на `http://minio:9000`; Docker DNS с хоста недоступен.
-- **Причина:** presigned SigV4 URL подписан с Host `minio:9000`, простая замена на localhost даёт 403.
-- **Фикс:** backend возвращает same-origin `/media/...`; nginx проксирует в MinIO с исходным Host.
-- **Range:** `Range`/`If-Range` передаются, buffering выключен. Проверен ответ `206 Partial Content`.
+## Проверка
 
-### BUG-3 — пустые постеры после первого запуска
-- **Симптом:** каталог был заполнен, но `PosterUrl` оставался NULL.
-- **Фикс:** seeder кладёт маленькие автономные SVG-постеры в MinIO: 12 фильмов и все 6 сериалов. Сеть/сторонний API не нужны.
+- Все 6 контейнеров Up: PostgreSQL и MinIO healthy, RabbitMQ healthy, backend, frontend/nginx, analytics.
+- .NET Release tests: **3/3**; analytics `uv run pytest`: **3/3**; frontend production build: passed.
+- API smoke: **16/16** (auth, movies, series structure, rating/status, comments/replies/likes, stats, streaming contract).
+- Admin login и API: dashboard/comments/ratings 200; movie create/update/delete 201/200/204; comment hide/approve 200.
+- Frontend `/`, `/admin`; nginx API and analytics proxy: 200.
+- Analytics health, overview, genres, activity, recommendations: 200.
+- Media proxy: poster redirects to same-origin `/media/...`; byte range returns 206.
+- RabbitMQ: durable topic exchange `cinema.events`; published smoke events consumed, analytics `processed_events` grows.
+- Fresh logs contain no `PoolClosed`, password-auth, upstream DNS, missing-exchange, unhandled or SigV4/403 errors.
 
-### BUG-4 — пустые оценки и комментарии
-- **Симптом:** блоки рейтингов/обсуждения невозможно нормально показать сразу после запуска.
-- **Фикс:** добавлены 3 demo users, 6 ratings, корневой комментарий и ответ. Повторный запуск не дублирует данные.
+## Осознанные ограничения
 
-### BUG-5 — хрупкая JWT-конфигурация
-- **Симптом:** при пропущенном секрете backend падал с неясным `Encoding.GetBytes(null)`.
-- **Фикс:** явная startup validation с понятным сообщением; `.env.example` содержит полный набор ключей.
-
-### BUG-6 — startup order frontend/MinIO
-- **Симптом:** nginx мог стартовать до готовности MinIO media upstream.
-- **Фикс:** frontend зависит от healthy MinIO и запущенного backend.
-
-## Результаты проверки
-
-- `dotnet test -c Release`: **3/3 passed**.
-- `npm run build`: **passed**, React/Vite production bundle создан.
-- `nginx -t`: **passed**.
-- HTTP: frontend `/` 200, SPA fallback 200, `/api/Movies` через nginx 200, Swagger 200, MinIO health 200.
-- Seed: 30 movies, 6 series, 31 seasons, 250 episodes, 12 actors, 8 genres, 6 ratings, 2 comments.
-- Media: poster endpoint 302 на `/media/...`, media 200, Range `bytes=0-127` → 206 и корректный Content-Range.
-- `node scripts/smoke-test.mjs`: **16/16 passed** (auth, catalog, series structure, ratings, statuses, comments, stats, streaming contract).
-- Логи сервисов: нет `Unhandled`, `PoolClosed`, password-auth, DNS или SigV4/403 ошибок.
-
-## Границы v2
-
-RabbitMQ, analytics microservice и персональные рекомендации относятся к v3 и намеренно не входят в v2 Compose. В coursework demo используются базовые агрегаты из основной БД. Видео-файлы не коммитятся в Git; Range-путь проверен на объекте MinIO, а видео загружается администратором перед показом streaming UI.
+Видео и пользовательские постеры не коммитятся в Git. Seeder создаёт автономные SVG-постеры; видео загружается администратором, чтобы репозиторий не раздувался. Backend не буферизует видео: браузер получает подписанный MinIO URL через nginx Range proxy.
