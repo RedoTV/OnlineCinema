@@ -124,7 +124,9 @@ def consumer_loop(stop_flag: list[bool]) -> None:
             )
             conn = pika.BlockingConnection(params)
             ch = conn.channel()
-            # гарантированная доставка: durable queue + переживёт рестарт брокера
+            # Consumer may start before the .NET publisher. Declaring the same durable
+            # topic exchange is idempotent and removes the startup race.
+            ch.exchange_declare(exchange=settings.rabbit_exchange, exchange_type="topic", durable=True)
             ch.queue_declare(queue=settings.rabbit_queue, durable=True)
             ch.queue_bind(queue=settings.rabbit_queue, exchange=settings.rabbit_exchange, routing_key="#")
 

@@ -127,6 +127,9 @@ public class DemoSeeder
             ("Друзья", 1994, comedy, drama, 10, 8),
             ("Чернобыль", 2019, drama, genres[7], 1, 5),
             ("Мандалорец", 2019, scifi, genres[0], 3, 8),
+            ("Шерлок", 2010, drama, genres[6], 4, 3),
+            ("Чёрное зеркало", 2011, scifi, genres[6], 6, 4),
+            ("Аркейн", 2021, genres[7], drama, 2, 9),
         };
         foreach (var (title, year, g1, g2, sCnt, eps) in seriesList)
         {

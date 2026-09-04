@@ -164,15 +164,21 @@ def hybrid_for_user(user_id: int, k: int = 10) -> list[dict]:
     if not has_user_history:
         log.info("Холодный старт юзера %s, отдаю по средним оценкам", user_id)
         if ratings.empty:
-            return []  # совсем пустая база — рекомендаций неоткуда взять
+            # Даже на абсолютно новой базе ряд в UI не должен исчезать.
+            return [
+                {"movieId": int(row.Id), "title": row.Title, "score": 0.0,
+                 "reason": "новинка каталога"}
+                for row in mov.sort_values(["ReleaseYear", "Id"], ascending=False).head(k).itertuples()
+            ]
         avg = ratings.groupby("MovieId")["RatingValue"].mean()
-        top = avg.sort_values(ascending=False).head(k).index
+        rated = [int(i) for i in avg.sort_values(ascending=False).index if i in set(mov["Id"])]
+        # Rated titles can be fewer than k on first startup; fill with recent catalog items.
+        candidates = rated + [int(i) for i in mov.sort_values(["ReleaseYear", "Id"], ascending=False)["Id"] if int(i) not in rated]
         titles = mov.set_index("Id")["Title"]
         return [
-            {"movieId": int(i), "title": titles.get(i, ""), "score": float(avg[i]),
-             "reason": "популярно у других"}
-            for i in top
-            if i in titles.index
+            {"movieId": i, "title": titles.get(i, ""), "score": float(avg.get(i, 0)),
+             "reason": "популярно у других" if i in avg.index else "новинка каталога"}
+            for i in candidates[:k]
         ]
 
     collab = _predict_from_matrix(user_id, ratings)
@@ -196,9 +202,17 @@ def hybrid_for_user(user_id: int, k: int = 10) -> list[dict]:
     top = avg.sort_values(ascending=False).head(k).index
     titles = mov.set_index("Id")["Title"]
     watched = set(ratings[ratings["UserId"] == user_id]["MovieId"])
-    return [
+    result = [
         {"movieId": int(i), "title": titles.get(i, ""), "score": float(avg[i]),
          "reason": "популярно у других"}
         for i in top
         if i in titles.index and i not in watched
     ]
+    used = watched | {x["movieId"] for x in result}
+    for row in mov.sort_values(["ReleaseYear", "Id"], ascending=False).itertuples():
+        if len(result) >= k:
+            break
+        if int(row.Id) not in used:
+            result.append({"movieId": int(row.Id), "title": row.Title, "score": 0.0,
+                           "reason": "новинка каталога"})
+    return result
