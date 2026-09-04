@@ -22,6 +22,7 @@ builder.Services.AddScoped<ISeriesService, SeriesService>();
 builder.Services.AddScoped<IUserActionService, UserActionService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<IPlaybackService, PlaybackService>();
+builder.Services.AddScoped<SampleMediaImporter>();
 builder.Services.AddSingleton<IStorageService, MinioStorageService>();
 
 // шина событий (RabbitMQ). Деградирует если брокер недоступен — не валит старт.
@@ -97,6 +98,21 @@ if (app.Configuration["SEED_DEMO_DATA"] == "true")
         await new DemoSeeder(
             scope.ServiceProvider.GetRequiredService<ApplicationDbContext>(),
             scope.ServiceProvider.GetRequiredService<IStorageService>()).SeedAsync();
+    }
+}
+
+// The checked-in coursework artwork and locally mounted sample films are imported
+// idempotently after seeding. This also upgrades an already populated demo database.
+if (app.Configuration["IMPORT_SAMPLE_MEDIA"] == "true")
+{
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<SampleMediaImporter>().ImportAsync();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Sample media import failed; the application will continue without it");
     }
 }
 

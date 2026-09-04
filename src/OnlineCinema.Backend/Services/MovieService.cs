@@ -23,6 +23,7 @@ public class MovieService : IMovieService
     {
         var query = _context.Movies
             .Include(m => m.Genres)
+            .Include(m => m.Actors)
             .Include(m => m.Ratings)
             .AsNoTracking()
             .AsQueryable();
@@ -94,6 +95,7 @@ public class MovieService : IMovieService
 
     public async Task<string> UploadPosterAsync(int id, IFormFile file)
     {
+        ValidateUpload(file, new[] { "image/jpeg", "image/png", "image/webp", "image/svg+xml" }, 15 * 1024 * 1024, "poster");
         var movie = await _context.Movies.FindAsync(id) ?? throw new KeyNotFoundException($"Movie with ID {id} not found");
         if (!string.IsNullOrEmpty(movie.PosterUrl) && _storage.TryParseObjectKey(movie.PosterUrl, out var oldKey))
             await _storage.DeleteAsync(oldKey);
@@ -110,6 +112,7 @@ public class MovieService : IMovieService
 
     public async Task<string> UploadVideoAsync(int id, IFormFile file)
     {
+        ValidateUpload(file, new[] { "video/mp4", "video/webm", "video/ogg", "video/x-matroska", "application/octet-stream" }, 10L * 1024 * 1024 * 1024, "video");
         var movie = await _context.Movies.FindAsync(id) ?? throw new KeyNotFoundException($"Movie with ID {id} not found");
         if (!string.IsNullOrEmpty(movie.VideoUrl) && _storage.TryParseObjectKey(movie.VideoUrl, out var oldKey))
             await _storage.DeleteAsync(oldKey);
@@ -121,6 +124,14 @@ public class MovieService : IMovieService
 
         await _context.SaveChangesAsync();
         return movie.VideoUrl;
+    }
+
+    private static void ValidateUpload(IFormFile file, IReadOnlyCollection<string> allowedTypes, long maxBytes, string label)
+    {
+        if (file == null || file.Length == 0) throw new ArgumentException($"The {label} file is empty.");
+        if (file.Length > maxBytes) throw new ArgumentException($"The {label} file is too large.");
+        if (!allowedTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
+            throw new ArgumentException($"Unsupported {label} content type: {file.ContentType}.");
     }
 
     public async Task DeleteAsync(int id)

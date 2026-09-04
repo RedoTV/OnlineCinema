@@ -67,6 +67,8 @@ services:
       - "5000:80"
     env_file:
       - .env
+    volumes:
+      - ./src/OnlineCinema.Backend/samples:/app/samples:ro
     depends_on:
       db:
         condition: service_healthy

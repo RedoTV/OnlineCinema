@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -68,6 +68,10 @@ public class MoviesController : ControllerBase
         {
             return NotFound();
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ProblemDetails { Title = ex.Message });
+        }
     }
 
     [HttpPost("{id}/upload-video"), Authorize(Roles = "Admin"), DisableRequestSizeLimit]
@@ -81,6 +85,10 @@ public class MoviesController : ControllerBase
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ProblemDetails { Title = ex.Message });
         }
     }
 

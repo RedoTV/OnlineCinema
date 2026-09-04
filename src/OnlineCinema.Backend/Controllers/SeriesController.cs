@@ -87,6 +87,10 @@ public class SeriesController : ControllerBase
         {
             return NotFound();
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ProblemDetails { Title = ex.Message });
+        }
     }
 
     [HttpPost("episodes/{episodeId}/upload-video"), Authorize(Roles = "Admin"), DisableRequestSizeLimit]
@@ -99,6 +103,10 @@ public class SeriesController : ControllerBase
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ProblemDetails { Title = ex.Message });
         }
     }
 

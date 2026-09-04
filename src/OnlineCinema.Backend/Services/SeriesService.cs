@@ -22,8 +22,9 @@ public class SeriesService : ISeriesService
     public async Task<IEnumerable<SeriesDto>> GetAllAsync(string? search, int? genreId)
     {
         var query = _context.Series
-            .Include(s => s.Seasons)
+            .Include(s => s.Seasons).ThenInclude(se => se.Episodes)
             .Include(s => s.Genres)
+            .Include(s => s.Actors)
             .Include(s => s.Ratings)
             .AsNoTracking()
             .AsQueryable();
@@ -111,6 +112,7 @@ public class SeriesService : ISeriesService
 
     public async Task<string> UploadPosterAsync(int id, IFormFile file)
     {
+        ValidateUpload(file, new[] { "image/jpeg", "image/png", "image/webp", "image/svg+xml" }, 15 * 1024 * 1024, "poster");
         var series = await _context.Series.FindAsync(id) ?? throw new KeyNotFoundException($"Series with ID {id} not found");
 
         if (!string.IsNullOrEmpty(series.PosterUrl) && _storage.TryParseObjectKey(series.PosterUrl, out var oldKey))
@@ -126,6 +128,7 @@ public class SeriesService : ISeriesService
 
     public async Task<string> UploadEpisodeVideoAsync(int episodeId, IFormFile file)
     {
+        ValidateUpload(file, new[] { "video/mp4", "video/webm", "video/ogg", "video/x-matroska", "application/octet-stream" }, 10L * 1024 * 1024 * 1024, "video");
         var episode = await _context.Episodes.FindAsync(episodeId) ?? throw new KeyNotFoundException($"Episode with ID {episodeId} not found");
 
         if (!string.IsNullOrEmpty(episode.VideoUrl) && _storage.TryParseObjectKey(episode.VideoUrl, out var oldKey))
@@ -137,6 +140,14 @@ public class SeriesService : ISeriesService
 
         await _context.SaveChangesAsync();
         return episode.VideoUrl;
+    }
+
+    private static void ValidateUpload(IFormFile file, IReadOnlyCollection<string> allowedTypes, long maxBytes, string label)
+    {
+        if (file == null || file.Length == 0) throw new ArgumentException($"The {label} file is empty.");
+        if (file.Length > maxBytes) throw new ArgumentException($"The {label} file is too large.");
+        if (!allowedTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
+            throw new ArgumentException($"Unsupported {label} content type: {file.ContentType}.");
     }
 
     public async Task DeleteAsync(int id)
