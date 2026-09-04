@@ -4,6 +4,7 @@ import { AuthContext } from './context/AuthContext';
 
 export const Header = () => {
     const { user, logout } = useContext(AuthContext);
+    const role = user?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || user?.role;
 
     return (
         <header className="w-full border-b-2 border-black bg-white py-4 px-6 mb-8 sticky top-0 z-50">
@@ -13,6 +14,7 @@ export const Header = () => {
                     <Link to="/series" className="hover:underline decoration-2 underline-offset-4">СЕРИАЛЫ</Link>
                     <Link to="/analytics" className="hover:underline decoration-2 underline-offset-4">АНАЛИТИКА</Link>
                     <Link to="/profile" className="hover:underline decoration-2 underline-offset-4">ЛИЧНЫЙ КАБИНЕТ</Link>
+                    {role === 'Admin' && <Link to="/admin" className="hover:underline decoration-2 underline-offset-4">АДМИН</Link>}
                 </nav>
                 {user ? (
                     <div className="flex items-center gap-3">
