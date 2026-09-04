@@ -13,5 +13,7 @@ public interface IStorageService
     /// Генерирует presigned URL для прямой отдачи/загрузки браузером в обход бэкенда.
     /// </summary>
     string GetPresignedUrl(string objectKey, int expirySeconds = 3600);
+    /// <summary>Возвращает same-origin URL, который браузер откроет через nginx.</summary>
+    string BuildBrowserMediaUrl(string objectKey, int expirySeconds = 3600);
     bool TryParseObjectKey(string? urlOrKey, out string objectKey);
 }

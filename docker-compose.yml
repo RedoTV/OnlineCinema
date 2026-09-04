@@ -65,7 +65,10 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+      minio:
+        condition: service_healthy
     networks:
       - onlinecinema_network
 

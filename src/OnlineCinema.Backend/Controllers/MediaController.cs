@@ -26,7 +26,7 @@ public class MediaController : ControllerBase
         if (movie == null || string.IsNullOrEmpty(movie.PosterUrl)) return NotFound();
 
         if (!_storage.TryParseObjectKey(movie.PosterUrl, out var key)) return BadRequest();
-        return Redirect(_storage.GetPresignedUrl(key, 3600));
+        return Redirect(_storage.BuildBrowserMediaUrl(key, 3600));
     }
 
     [HttpGet("poster/actor/{actorId}")]
@@ -36,7 +36,7 @@ public class MediaController : ControllerBase
         if (actor == null || string.IsNullOrEmpty(actor.PhotoUrl)) return NotFound();
 
         if (!_storage.TryParseObjectKey(actor.PhotoUrl, out var key)) return BadRequest();
-        return Redirect(_storage.GetPresignedUrl(key, 3600));
+        return Redirect(_storage.BuildBrowserMediaUrl(key, 3600));
     }
 
     [HttpGet("poster/series/{seriesId}")]
@@ -46,6 +46,6 @@ public class MediaController : ControllerBase
         if (series == null || string.IsNullOrEmpty(series.PosterUrl)) return NotFound();
 
         if (!_storage.TryParseObjectKey(series.PosterUrl, out var key)) return BadRequest();
-        return Redirect(_storage.GetPresignedUrl(key, 3600));
+        return Redirect(_storage.BuildBrowserMediaUrl(key, 3600));
     }
 }

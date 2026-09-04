@@ -91,7 +91,9 @@ if (app.Configuration["SEED_DEMO_DATA"] == "true")
 {
     using (var scope = app.Services.CreateScope())
     {
-        await new DemoSeeder(scope.ServiceProvider.GetRequiredService<ApplicationDbContext>()).SeedAsync();
+        await new DemoSeeder(
+            scope.ServiceProvider.GetRequiredService<ApplicationDbContext>(),
+            scope.ServiceProvider.GetRequiredService<IStorageService>()).SeedAsync();
     }
 }
 
@@ -132,11 +134,14 @@ static void AddJwtBearerAuthentication(WebApplicationBuilder builder)
     .AddJwtBearer("Bearer", options =>
     {
         var jwtSecret = builder.Configuration["JwtSettings:Secret"];
+        if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
+            throw new InvalidOperationException("JwtSettings:Secret is required and must contain at least 32 characters.");
+
         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-                System.Text.Encoding.UTF8.GetBytes(jwtSecret!)),
+                System.Text.Encoding.UTF8.GetBytes(jwtSecret)),
             ValidateIssuer = true,
             ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
             ValidateAudience = true,

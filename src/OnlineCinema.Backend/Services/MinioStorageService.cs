@@ -83,6 +83,16 @@ public class MinioStorageService : IStorageService
         return _client.PresignedGetObjectAsync(args).GetAwaiter().GetResult();
     }
 
+    public string BuildBrowserMediaUrl(string objectKey, int expirySeconds = 3600)
+    {
+        var signedUrl = GetPresignedUrl(objectKey, expirySeconds);
+        var uri = new Uri(signedUrl);
+
+        // Signature includes Host=minio:9000. nginx keeps that Host upstream,
+        // while the browser stays on localhost:3000 and never sees Docker DNS.
+        return $"/media{uri.AbsolutePath}{uri.Query}";
+    }
+
     public bool TryParseObjectKey(string? urlOrKey, out string objectKey)
     {
         objectKey = "";

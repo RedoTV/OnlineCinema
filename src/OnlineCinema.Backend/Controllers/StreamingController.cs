@@ -31,7 +31,7 @@ public class StreamingController : ControllerBase
         if (!_storage.TryParseObjectKey(movie.VideoUrl, out var key))
             return BadRequest("Broken video reference");
 
-        var url = _storage.GetPresignedUrl(key, 3600);
+        var url = _storage.BuildBrowserMediaUrl(key, 3600);
         return Ok(new { url });
     }
 
@@ -45,7 +45,7 @@ public class StreamingController : ControllerBase
         if (!_storage.TryParseObjectKey(episode.VideoUrl, out var key))
             return BadRequest("Broken video reference");
 
-        var url = _storage.GetPresignedUrl(key, 3600);
+        var url = _storage.BuildBrowserMediaUrl(key, 3600);
         return Ok(new { url });
     }
 }
