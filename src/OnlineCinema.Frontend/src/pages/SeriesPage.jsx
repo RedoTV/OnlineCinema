@@ -3,7 +3,25 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../api/axios';
 import { CommentSection } from '../components/CommentSection';
 import { VideoPlayer } from '../components/VideoPlayer';
+import { PosterImage } from '../components/PosterImage';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { AuthContext } from '../context/AuthContext';
+
+const SKELETON_COUNT = 8;
+
+const SeriesListSkeleton = () => (
+  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" aria-hidden="true">
+    {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+      <div key={i} className="border-2 border-black">
+        <div className="aspect-[2/3] w-full animate-pulse bg-neutral-200" />
+        <div className="space-y-2 p-3">
+          <div className="h-4 animate-pulse bg-neutral-200" />
+          <div className="h-3 w-2/3 animate-pulse bg-neutral-200" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
 
 // Страница сериалов: список (без id) или детальная (с id) со сезонами/эпизодами
 export const SeriesPage = () => {
@@ -12,6 +30,11 @@ export const SeriesPage = () => {
   const [seriesList, setSeriesList] = useState([]);
   const [series, setSeries] = useState(null);
   const [search, setSearch] = useState('');
+  const [listLoading, setListLoading] = useState(false);
+  const [listError, setListError] = useState('');
+  const [listRetry, setListRetry] = useState(0);
+  // Поиск бьёт в API только после паузы ввода, а не на каждую клавишу.
+  const debouncedSearch = useDebouncedValue(search, 350);
   const [streamUrl, setStreamUrl] = useState(null);
   const [activeEpisode, setActiveEpisode] = useState(null);
   const [initialPosition, setInitialPosition] = useState(0);
@@ -30,11 +53,25 @@ export const SeriesPage = () => {
   // список
   useEffect(() => {
     if (id) return;
-    const params = search ? `?search=${search}` : '';
-    api.get(`/Series${params}`)
+    const controller = new AbortController();
+    setListLoading(true);
+    setListError('');
+
+    const params = debouncedSearch ? `?search=${encodeURIComponent(debouncedSearch)}` : '';
+    api.get(`/Series${params}`, { signal: controller.signal })
       .then(res => setSeriesList(res.data))
-      .catch(() => {});
-  }, [search, id]);
+      .catch((err) => {
+        if (err?.code === 'ERR_CANCELED') return;
+        console.error('series list failed', err);
+        setListError('Не удалось загрузить сериалы');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setListLoading(false);
+      });
+
+    // Устаревший ответ поиска не затирает свежий.
+    return () => controller.abort();
+  }, [debouncedSearch, listRetry, id]);
 
   // детальная
   useEffect(() => {
@@ -82,22 +119,44 @@ export const SeriesPage = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {seriesList.map(s => (
-            <Link to={`/series/${s.id}`} key={s.id} className="group block border-2 border-black hover:bg-black hover:text-white transition-colors">
-              <div className="aspect-[2/3] w-full overflow-hidden border-b-2 border-black group-hover:border-white">
-                <img src={`/api/Media/poster/series/${s.id}`} alt={s.title} className="w-full h-full object-cover" />
-              </div>
-              <div className="p-3">
-                <h3 className="font-bold text-lg leading-tight uppercase">{s.title}</h3>
-                <div className="flex justify-between text-sm font-medium">
-                  <span>{s.releaseYear}</span>
-                  <span>★ {s.averageRating?.toFixed(1)} · {s.seasonsCount} сез.</span>
+        {listError && (
+          <div className="mb-6 border-2 border-red-600 p-4 text-center">
+            <p className="font-bold text-red-600">{listError}</p>
+            <button
+              onClick={() => setListRetry((n) => n + 1)}
+              className="mt-2 border-2 border-black px-4 py-1 font-bold hover:bg-black hover:text-white"
+            >
+              Повторить
+            </button>
+          </div>
+        )}
+        {listLoading && seriesList.length === 0 ? (
+          <SeriesListSkeleton />
+        ) : (
+          <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6${listLoading ? ' opacity-60' : ''}`}>
+            {seriesList.map((s, i) => (
+              <Link to={`/series/${s.id}`} key={s.id} className="group block border-2 border-black hover:bg-black hover:text-white transition-colors">
+                <div className="relative aspect-[2/3] w-full overflow-hidden border-b-2 border-black group-hover:border-white">
+                  <PosterImage
+                    src={s.posterUrl ? `/api/Media/poster/series/${s.id}` : null}
+                    alt={s.title}
+                    eager={i < 4}
+                  />
                 </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+                <div className="p-3">
+                  <h3 className="font-bold text-lg leading-tight uppercase">{s.title}</h3>
+                  <div className="flex justify-between text-sm font-medium">
+                    <span>{s.releaseYear}</span>
+                    <span>★ {s.averageRating?.toFixed(1)} · {s.seasonsCount} сез.</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+        {!listLoading && !listError && seriesList.length === 0 && (
+          <p className="mt-6 text-center text-lg italic text-gray-500">Ничего не найдено</p>
+        )}
       </div>
     );
   }
