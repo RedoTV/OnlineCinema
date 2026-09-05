@@ -30,7 +30,7 @@ export const SeriesPage = () => {
   const [seriesList, setSeriesList] = useState([]);
   const [series, setSeries] = useState(null);
   const [search, setSearch] = useState('');
-  const [listLoading, setListLoading] = useState(false);
+  const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState('');
   const [listRetry, setListRetry] = useState(0);
   // Поиск бьёт в API только после паузы ввода, а не на каждую клавишу.
@@ -39,6 +39,20 @@ export const SeriesPage = () => {
   const [activeEpisode, setActiveEpisode] = useState(null);
   const [initialPosition, setInitialPosition] = useState(0);
   const [myRating, setMyRating] = useState(8);
+
+  // Сброс listLoading/listError живёт в обработчиках, а не в эффекте:
+  // синхронный setState в теле эффекта запрещён (каскадные рендеры).
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setListError('');
+    setListLoading(true);
+  };
+
+  const handleListRetry = () => {
+    setListError('');
+    setListLoading(true);
+    setListRetry((n) => n + 1);
+  };
 
   const handleRate = async () => {
     try {
@@ -54,8 +68,6 @@ export const SeriesPage = () => {
   useEffect(() => {
     if (id) return;
     const controller = new AbortController();
-    setListLoading(true);
-    setListError('');
 
     const params = debouncedSearch ? `?search=${encodeURIComponent(debouncedSearch)}` : '';
     api.get(`/Series${params}`, { signal: controller.signal })
@@ -117,13 +129,13 @@ export const SeriesPage = () => {
           placeholder="Поиск сериала..."
           className="w-full p-3 border-2 border-black outline-none mb-6"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={handleSearchChange}
         />
         {listError && (
           <div className="mb-6 border-2 border-red-600 p-4 text-center">
             <p className="font-bold text-red-600">{listError}</p>
             <button
-              onClick={() => setListRetry((n) => n + 1)}
+              onClick={handleListRetry}
               className="mt-2 border-2 border-black px-4 py-1 font-bold hover:bg-black hover:text-white"
             >
               Повторить
