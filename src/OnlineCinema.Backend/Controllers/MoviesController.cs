@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using OnlineCinema.Backend.Data;
 using OnlineCinema.Backend.Models;
 using OnlineCinema.Backend.Models.DTOs.Movies;
-using OnlineCinema.Backend.Services;
+using OnlineCinema.Backend.Services.Movies;
 
 namespace OnlineCinema.Backend.Controllers;
 
