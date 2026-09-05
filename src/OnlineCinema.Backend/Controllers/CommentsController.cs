@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OnlineCinema.Backend.Models.DTOs.Comments;
-using OnlineCinema.Backend.Services;
+using OnlineCinema.Backend.Services.Comments;
 using System.Security.Claims;
 
 namespace OnlineCinema.Backend.Controllers;

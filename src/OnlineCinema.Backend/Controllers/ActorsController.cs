@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OnlineCinema.Backend.Models.DTOs.Actors;
-using OnlineCinema.Backend.Services;
+using OnlineCinema.Backend.Services.Actors;
 
 namespace OnlineCinema.Backend.Controllers;
 

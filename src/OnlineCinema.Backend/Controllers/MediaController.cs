@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using OnlineCinema.Backend.Data;
-using OnlineCinema.Backend.Services;
+using OnlineCinema.Backend.Services.Media;
+using OnlineCinema.Backend.Services.Storage;
 
 namespace OnlineCinema.Backend.Controllers;
 
@@ -9,13 +8,13 @@ namespace OnlineCinema.Backend.Controllers;
 [Route("api/[controller]")]
 public class MediaController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IMediaService _media;
     private readonly IStorageService _storage;
     private readonly IPosterPreviewService _previews;
 
-    public MediaController(ApplicationDbContext context, IStorageService storage, IPosterPreviewService previews)
+    public MediaController(IMediaService media, IStorageService storage, IPosterPreviewService previews)
     {
-        _context = context;
+        _media = media;
         _storage = storage;
         _previews = previews;
     }
@@ -25,10 +24,9 @@ public class MediaController : ControllerBase
     [HttpGet("poster/{movieId}")]
     public async Task<IActionResult> GetPosterUrl(int movieId, [FromQuery] string? size = null)
     {
-        var movie = await _context.Movies.FindAsync(movieId);
-        if (movie == null || string.IsNullOrEmpty(movie.PosterUrl)) return NotFound();
+        var key = await _media.GetMoviePosterKeyAsync(movieId, HttpContext.RequestAborted);
+        if (key == null) return NotFound();
 
-        if (!_storage.TryParseObjectKey(movie.PosterUrl, out var key)) return BadRequest();
         if (IsPreview(size))
         {
             var (stream, contentType, _) = await _previews.GetPreviewAsync(key, HttpContext.RequestAborted);
@@ -40,10 +38,9 @@ public class MediaController : ControllerBase
     [HttpGet("poster/actor/{actorId}")]
     public async Task<IActionResult> GetActorPhotoUrl(int actorId, [FromQuery] string? size = null)
     {
-        var actor = await _context.Actors.FindAsync(actorId);
-        if (actor == null || string.IsNullOrEmpty(actor.PhotoUrl)) return NotFound();
+        var key = await _media.GetActorPhotoKeyAsync(actorId, HttpContext.RequestAborted);
+        if (key == null) return NotFound();
 
-        if (!_storage.TryParseObjectKey(actor.PhotoUrl, out var key)) return BadRequest();
         if (IsPreview(size))
         {
             var (stream, contentType, _) = await _previews.GetPreviewAsync(key, HttpContext.RequestAborted);
@@ -55,10 +52,9 @@ public class MediaController : ControllerBase
     [HttpGet("poster/series/{seriesId}")]
     public async Task<IActionResult> GetSeriesPosterUrl(int seriesId, [FromQuery] string? size = null)
     {
-        var series = await _context.Series.FindAsync(seriesId);
-        if (series == null || string.IsNullOrEmpty(series.PosterUrl)) return NotFound();
+        var key = await _media.GetSeriesPosterKeyAsync(seriesId, HttpContext.RequestAborted);
+        if (key == null) return NotFound();
 
-        if (!_storage.TryParseObjectKey(series.PosterUrl, out var key)) return BadRequest();
         if (IsPreview(size))
         {
             var (stream, contentType, _) = await _previews.GetPreviewAsync(key, HttpContext.RequestAborted);

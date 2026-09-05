@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using OnlineCinema.Backend.Models.DTOs.Auth;
-using OnlineCinema.Backend.Services;
+using OnlineCinema.Backend.Services.Auth;
 
 namespace OnlineCinema.Backend.Controllers;
 
