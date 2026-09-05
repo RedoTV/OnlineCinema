@@ -4,7 +4,7 @@ namespace OnlineCinema.Backend.Services;
 
 public interface ISeriesService
 {
-    Task<IEnumerable<SeriesDto>> GetAllAsync(string? search, int? genreId);
+    Task<IEnumerable<SeriesSummaryDto>> GetAllAsync(string? search, int? genreId);
     Task<SeriesDto?> GetByIdAsync(int id);
     Task<SeriesDto> CreateAsync(CreateSeriesDto dto);
     Task<SeriesDto> UpdateAsync(int id, UpdateSeriesDto dto);

@@ -19,15 +19,11 @@ public class SeriesService : ISeriesService
         _storage = storage;
     }
 
-    public async Task<IEnumerable<SeriesDto>> GetAllAsync(string? search, int? genreId)
+    public async Task<IEnumerable<SeriesSummaryDto>> GetAllAsync(string? search, int? genreId)
     {
-        var query = _context.Series
-            .Include(s => s.Seasons).ThenInclude(se => se.Episodes)
-            .Include(s => s.Genres)
-            .Include(s => s.Actors)
-            .Include(s => s.Ratings)
-            .AsNoTracking()
-            .AsQueryable();
+        // Списочная проекция одним SQL-запросом: без сезонов/эпизодов/жанров/актёров.
+        // Раньше список тащил все 300+ эпизодов с описаниями ради грида.
+        var query = _context.Series.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(s => s.Title.ToLower().Contains(search.ToLower()));
@@ -35,8 +31,21 @@ public class SeriesService : ISeriesService
         if (genreId.HasValue)
             query = query.Where(s => s.Genres.Any(g => g.Id == genreId));
 
-        var series = await query.ToListAsync();
-        return _mapper.Map<IEnumerable<SeriesDto>>(series);
+        return await query
+            .OrderBy(s => s.Id)
+            .Select(s => new SeriesSummaryDto
+            {
+                Id = s.Id,
+                Title = s.Title,
+                Description = s.Description,
+                ReleaseYear = s.ReleaseYear,
+                PosterUrl = s.PosterUrl,
+                AverageRating = s.Ratings.Any() ? s.Ratings.Average(r => r.RatingValue) : 0,
+                SeasonsCount = s.Seasons.Count,
+                EpisodesCount = s.Seasons.SelectMany(se => se.Episodes).Count(),
+                HasVideo = s.Seasons.SelectMany(se => se.Episodes).Any(ep => ep.VideoUrl != null && ep.VideoUrl != "")
+            })
+            .ToListAsync();
     }
 
     public async Task<SeriesDto?> GetByIdAsync(int id)

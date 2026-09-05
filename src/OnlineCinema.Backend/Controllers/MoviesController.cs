@@ -21,7 +21,7 @@ public class MoviesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<MovieDto>>> GetMovies([FromQuery] string? search, [FromQuery] int? genreId)
+    public async Task<ActionResult<IEnumerable<MovieSummaryDto>>> GetMovies([FromQuery] string? search, [FromQuery] int? genreId)
     {
         var movies = await _movieService.GetAllAsync(search, genreId);
         return Ok(movies);
