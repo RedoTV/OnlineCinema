@@ -1,8 +1,9 @@
 import axios from 'axios';
 
 const API_URL = import.meta.env.PROD ? '/api' : 'http://localhost:5000/api';
-// analytics-сервис (FastAPI). В проде идём через nginx префикс /analytics
-const ANALYTICS_URL = import.meta.env.PROD ? '/analytics' : 'http://localhost:8000';
+// analytics-сервис (FastAPI). В проде идём через nginx-префикс
+// /api/analytics (сам /analytics занят SPA-страницей дашборда).
+const ANALYTICS_URL = import.meta.env.PROD ? '/api/analytics' : 'http://localhost:8000';
 
 export const api = axios.create({
     baseURL: API_URL,

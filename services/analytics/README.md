@@ -25,7 +25,8 @@
   `tests/test_events.py`. Тип `episode` в агрегатах не используется:
   эпизоды отображаются на родительский сериал через `Seasons`.
 - Фронт ходит сюда через `analyticsApi`: в dev напрямую на
-  `http://localhost:8000`, в проде через nginx-префикс `/analytics/`.
+  `http://localhost:8000`, в проде через nginx-префикс `/api/analytics/`
+  (сам `/analytics` занят SPA-страницей дашборда).
 
 ## Локальный запуск
 

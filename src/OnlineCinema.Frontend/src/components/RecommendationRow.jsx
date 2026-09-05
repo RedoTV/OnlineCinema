@@ -29,9 +29,9 @@ export const RecommendationRow = ({ userId, username }) => {
           <div key={r.movieId} className="border-2 border-black hover:bg-black hover:text-white transition-colors">
             <Link to={`/movie/${r.movieId}`} className="block p-3">
               <div className="font-bold leading-tight mb-1 uppercase text-sm">{r.title}</div>
-              <div className="text-xs flex justify-between">
-                <span>рейтинг-балл {Number(r.score).toFixed(1)}</span>
-                {r.reason && <span className="italic hidden">{r.reason}</span>}
+              <div className="text-xs flex justify-between gap-2">
+                <span>★ {Number(r.score).toFixed(1)}</span>
+                {r.reason && <span className="italic text-right">{r.reason}</span>}
               </div>
             </Link>
           </div>
