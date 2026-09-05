@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../api/axios';
 import { Link } from 'react-router-dom';
 
-// Статистика (v2.0 пока читает из основной БД, агрегации SQL)
+// Базовая статистика читает агрегаты из основной БД.
 export const StatsPage = () => {
   const [topRated, setTopRated] = useState([]);
   const [mostWatched, setMostWatched] = useState([]);

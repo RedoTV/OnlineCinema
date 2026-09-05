@@ -1,7 +1,7 @@
 namespace OnlineCinema.Backend.Events;
 
 /// <summary>
-/// Публикует события в шину. v3.0: реализация на RabbitMQ.
+/// Публикует события в шину RabbitMQ.
 /// В рантайме это fire-and-forget после коммита в БД (см. README —
 /// честно признаю что outbox тут нет, для диплома ок).
 /// </summary>

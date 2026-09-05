@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { analyticsApi } from '../api/axios';
 import { Link } from 'react-router-dom';
 
-// Дашборд аналитики (v3.0). Тянет агрегаты из Python-сервиса.
+// Дашборд аналитики. Тянет агрегаты из Python-сервиса.
 const fmt = (s) => {
   const num = Number(s) || 0;
   if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
@@ -26,7 +26,7 @@ export const AnalyticsDashboard = () => {
   };
 
   useEffect(() => {
-    analyticsApi.get('/health').then(() => setReady(true)).catch(() => setError('Analytics-сервис недоступен (v3.0). Подними через docker compose --profile full up'));
+    analyticsApi.get('/health').then(() => setReady(true)).catch(() => setError('Analytics-сервис недоступен. Подними через docker compose --profile full up'));
     load();
   }, [window]);
 

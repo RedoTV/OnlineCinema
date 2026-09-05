@@ -41,7 +41,7 @@ export const HomePage = () => {
         />
       </div>
 
-      {/* v3.0: персонализация + live-активность из analytics */}
+      {/* Персонализация + live-активность из analytics */}
       <RecommendationRow userId={userId} username={username} />
       <ActivityFeed userId={userId} />
 

@@ -5,8 +5,8 @@ using OnlineCinema.Backend.Models.Enums;
 
 namespace OnlineCinema.Backend.Controllers;
 
-// Базовая статистика (v2.0) — читаем напрямую из основной БД.
-// В v3.0 это переедет в отдельный analytics-сервис на событиях.
+// Базовая статистика читает данные напрямую из основной БД.
+// Событийные агрегаты и рекомендации доступны через analytics-сервис.
 [ApiController]
 [Route("api/[controller]")]
 public class StatsController : ControllerBase

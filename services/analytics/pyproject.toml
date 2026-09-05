@@ -1,7 +1,7 @@
 [project]
 name = "onlinecinema-analytics"
 version = "0.1.0"
-description = "Analytics microservice: stats, recommendations and activity feed (v3.0)"
+description = "OnlineCinema analytics: stats, recommendations and activity feed"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",
