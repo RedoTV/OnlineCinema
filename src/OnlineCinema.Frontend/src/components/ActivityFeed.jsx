@@ -45,7 +45,7 @@ export const ActivityFeed = ({ userId }) => {
               {KIND_LABEL[e.kind] || e.kind}{' '}
               {e.ref_type && e.ref_id ? (
                 <Link to={e.ref_type === 'movie' ? `/movie/${e.ref_id}` : `/series/${e.ref_id}`} className="underline">
-                  #{e.ref_id}
+                  «{e.ref_title || `#${e.ref_id}`}»
                 </Link>
               ) : null}
               {e.note ? <> · <span className="text-gray-600">{e.note}</span></> : null}

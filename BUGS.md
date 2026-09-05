@@ -21,6 +21,7 @@
 15. **Analytics терял оценки:** бэкенд шлёт `movie.rated`/`series.rated` как `{contentType, contentId}`, а консьюмер ждал `{movieId}` — в `content_stats` копилась мусорная строка `series/0`. Добавлен `normalize_event` (оба формата), эпизоды маппятся на сериал через `Seasons`, username подтягивается из `Users`.
 16. **Trending без названий:** `/stats/trending` отдавал голые id, дашборд вёл сериалы на `/movie/{id}`. Тренды обогащены `LEFT JOIN` к каталогу, ссылки ведут на `/movie` или `/series` по типу.
 17. **Analytics без обвязки:** нет README, нет healthcheck в compose, CI не гонял `uv`-тесты. Добавлены `services/analytics/README.md`, healthcheck `/health`, CI-job `test-analytics` (pytest + ruff).
+18. **Страница `/analytics` не открывалась:** префикс `location /analytics/` в nginx перехватывал SPA-роут дашборда — nginx 301-редиректил на `http://localhost/analytics/` с потерей порта, а `/analytics/` уходило в API (404 от FastAPI). API переехало на `/api/analytics/`, страница снова отдаёт SPA 200. Заодно: лента обогащена `ref_title` из каталога (вместо голых `#id`), в рекомендациях видна причина, у дашборда появились loading/error/retry вместо тихих пустот.
 
 ## Проверка
 

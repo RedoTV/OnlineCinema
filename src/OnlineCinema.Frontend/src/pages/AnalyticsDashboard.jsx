@@ -13,22 +13,57 @@ const fmt = (s) => {
 export const AnalyticsDashboard = () => {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
   const [trending, setTrending] = useState([]);
   const [topRated, setTopRated] = useState([]);
   const [genreMix, setGenreMix] = useState([]);
   const [window, setWindow] = useState('168');
+  const [retry, setRetry] = useState(0);
 
-  const load = () => {
-    analyticsApi.get(`/stats/trending?window=${window === '168' ? '7d' : window === '24' ? '24h' : '30d'}`)
-      .then(r => setTrending(r.data)).catch(() => {});
-    analyticsApi.get('/stats/top-rated?k=8').then(r => setTopRated(r.data)).catch(() => {});
-    analyticsApi.get('/stats/genres').then(r => setGenreMix(r.data)).catch(() => {});
+  const windowParam = window === '168' ? '7d' : window === '24' ? '24h' : '30d';
+
+  const handleWindowChange = (k) => {
+    setWindow(k);
+    setError('');
+    setLoading(true);
   };
 
+  const handleRetry = () => {
+    setError('');
+    setLoading(true);
+    setRetry((n) => n + 1);
+  };
+
+  // Все три виджета грузятся параллельно; ошибка любого видна,
+  // а не тонет в тихом catch — иначе пустые секции выглядят как «нет данных».
   useEffect(() => {
-    analyticsApi.get('/health').then(() => setReady(true)).catch(() => setError('Analytics-сервис недоступен. Подними через docker compose up -d'));
-    load();
-  }, [window]);
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    analyticsApi.get('/health', { signal })
+      .then(() => setReady(true))
+      .catch((err) => {
+        if (err?.code === 'ERR_CANCELED') return;
+        setError('Analytics-сервис недоступен. Подними через docker compose up -d');
+        setLoading(false);
+      });
+
+    Promise.allSettled([
+      analyticsApi.get(`/stats/trending?window=${windowParam}`, { signal }),
+      analyticsApi.get('/stats/top-rated?k=8', { signal }),
+      analyticsApi.get('/stats/genres', { signal }),
+    ]).then(([t, top, genres]) => {
+      if (signal.aborted) return;
+      if (t.status === 'fulfilled') setTrending(t.value.data);
+      if (top.status === 'fulfilled') setTopRated(top.value.data);
+      if (genres.status === 'fulfilled') setGenreMix(genres.value.data);
+      const failed = [t, top, genres].filter(r => r.status === 'rejected');
+      if (failed.length > 0) setError('Часть виджетов не загрузилась — повтори попытку');
+      setLoading(false);
+    });
+
+    return () => controller.abort();
+  }, [windowParam, retry]);
 
   const maxGenre = Math.max(...genreMix.map(g => g.cnt), 1);
 
@@ -37,12 +72,22 @@ export const AnalyticsDashboard = () => {
       <h1 className="text-4xl font-black uppercase mb-2 border-l-8 border-black pl-4">АНАЛИТИКА</h1>
       <p className="text-sm text-gray-600 mb-6 italic">агрегируется из событий RabbitMQ в реальном времени (Python/FastAPI)</p>
 
-      {error && <div className="text-red-600 font-bold border-2 border-red-600 p-3 mb-4">{error}</div>}
+      {error && (
+        <div className="border-2 border-red-600 p-4 mb-4 text-center">
+          <p className="text-red-600 font-bold">{error}</p>
+          <button
+            onClick={handleRetry}
+            className="mt-2 border-2 border-black px-4 py-1 font-bold hover:bg-black hover:text-white"
+          >
+            Повторить
+          </button>
+        </div>
+      )}
 
       {ready && (
         <div className="mb-6 flex gap-2">
           {[{ k: '24', l: '24 часа' }, { k: '168', l: 'Неделя' }, { k: '720', l: 'Месяц' }].map(w => (
-            <button key={w.k} onClick={() => setWindow(w.k)}
+            <button key={w.k} onClick={() => handleWindowChange(w.k)}
               className={`px-3 py-1 border-2 border-black font-bold text-sm ${window === w.k ? 'bg-black text-white' : ''}`}>
               {w.l}
             </button>
@@ -50,6 +95,21 @@ export const AnalyticsDashboard = () => {
         </div>
       )}
 
+      {loading && (
+        <div className="grid md:grid-cols-2 gap-8" aria-hidden="true">
+          {[0, 1].map(i => (
+            <div key={i} className="space-y-2">
+              <div className="h-6 w-1/2 animate-pulse bg-neutral-200" />
+              {Array.from({ length: 5 }).map((_, j) => (
+                <div key={j} className="h-4 animate-pulse bg-neutral-200" />
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && (
+      <>
       <div className="grid md:grid-cols-2 gap-8">
         <section>
           <h2 className="text-xl font-bold border-b-2 border-black mb-3 pb-1">ТРЕНДЫ (по просмотрам+времени)</h2>
@@ -100,6 +160,8 @@ export const AnalyticsDashboard = () => {
           {ready && genreMix.length === 0 && <p className="italic text-gray-500">Пусто</p>}
         </div>
       </section>
+      </>
+      )}
     </div>
   );
 };
