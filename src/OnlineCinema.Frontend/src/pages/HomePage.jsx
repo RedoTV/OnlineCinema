@@ -37,10 +37,22 @@ export const HomePage = () => {
   const userId = user ? Number(user.sub) : null;
   const username = user?.username;
 
+  // Сброс loading/error живёт в обработчиках, а не в эффекте:
+  // синхронный setState в теле эффекта запрещён (каскадные рендеры).
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setError('');
+    setLoading(true);
+  };
+
+  const handleRetry = () => {
+    setError('');
+    setLoading(true);
+    setRetry((n) => n + 1);
+  };
+
   useEffect(() => {
     const controller = new AbortController();
-    setLoading(true);
-    setError('');
 
     const params = new URLSearchParams();
     if (debouncedSearch) params.append('search', debouncedSearch);
@@ -69,7 +81,7 @@ export const HomePage = () => {
           placeholder="Поиск фильма по названию..."
           className="w-full p-3 border-2 border-black outline-none focus:ring-2 focus:ring-black transition-all font-medium placeholder-gray-500"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={handleSearchChange}
         />
       </div>
 
@@ -82,7 +94,7 @@ export const HomePage = () => {
         <div className="mb-6 border-2 border-red-600 p-4 text-center">
           <p className="font-bold text-red-600">{error}</p>
           <button
-            onClick={() => setRetry((n) => n + 1)}
+            onClick={handleRetry}
             className="mt-2 border-2 border-black px-4 py-1 font-bold hover:bg-black hover:text-white"
           >
             Повторить
