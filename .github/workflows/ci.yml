@@ -71,6 +71,17 @@ jobs:
       - name: Docker compose up
         run: docker compose up -d --wait db minio backend frontend
 
+      - name: Wait for backend API
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:5000/swagger/index.html > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs backend
+          exit 1
+
       - name: Run smoke tests
         run: node scripts/smoke-test.mjs http://localhost:5000/api
 
