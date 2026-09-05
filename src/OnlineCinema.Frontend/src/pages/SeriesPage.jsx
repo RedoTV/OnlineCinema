@@ -138,7 +138,7 @@ export const SeriesPage = () => {
               <Link to={`/series/${s.id}`} key={s.id} className="group block border-2 border-black hover:bg-black hover:text-white transition-colors">
                 <div className="relative aspect-[2/3] w-full overflow-hidden border-b-2 border-black group-hover:border-white">
                   <PosterImage
-                    src={s.posterUrl ? `/api/Media/poster/series/${s.id}` : null}
+                    src={s.posterUrl ? `/api/Media/poster/series/${s.id}?size=preview` : null}
                     alt={s.title}
                     eager={i < 4}
                   />
