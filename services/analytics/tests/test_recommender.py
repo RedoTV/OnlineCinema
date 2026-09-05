@@ -1,7 +1,6 @@
 """Юнит-тесты математики рекомендаций (без обращения к БД)."""
 
 import pandas as pd
-import pytest
 
 from app.recommender import _predict_from_matrix
 

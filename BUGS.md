@@ -18,11 +18,14 @@
 12. **JWT null crash:** обязательный секрет валидируется при старте понятным сообщением.
 13. **Не было frontend Admin Panel:** добавлен защищённый `/admin` в прежней чёрно-белой стилистике: overview, CRUD фильмов/сериалов/актёров/жанров, poster upload, hide/approve/delete comments, ratings table.
 14. **Не хватало admin read API:** добавлены `/api/Admin/dashboard`, `/comments`, `/ratings` под ролью Admin.
+15. **Analytics терял оценки:** бэкенд шлёт `movie.rated`/`series.rated` как `{contentType, contentId}`, а консьюмер ждал `{movieId}` — в `content_stats` копилась мусорная строка `series/0`. Добавлен `normalize_event` (оба формата), эпизоды маппятся на сериал через `Seasons`, username подтягивается из `Users`.
+16. **Trending без названий:** `/stats/trending` отдавал голые id, дашборд вёл сериалы на `/movie/{id}`. Тренды обогащены `LEFT JOIN` к каталогу, ссылки ведут на `/movie` или `/series` по типу.
+17. **Analytics без обвязки:** нет README, нет healthcheck в compose, CI не гонял `uv`-тесты. Добавлены `services/analytics/README.md`, healthcheck `/health`, CI-job `test-analytics` (pytest + ruff).
 
 ## Проверка
 
 - Все 6 контейнеров Up: PostgreSQL и MinIO healthy, RabbitMQ healthy, backend, frontend/nginx, analytics.
-- .NET Release tests: **3/3**; analytics `uv run pytest`: **3/3**; frontend production build: passed.
+- .NET Release tests: **6/6**; analytics `uv run pytest`: **13/13** (+ `ruff check` чист); frontend production build: passed.
 - API smoke: **16/16** (auth, movies, series structure, rating/status, comments/replies/likes, stats, streaming contract).
 - Admin login и API: dashboard/comments/ratings 200; movie create/update/delete 201/200/204; comment hide/approve 200.
 - Frontend `/`, `/admin`; nginx API and analytics proxy: 200.

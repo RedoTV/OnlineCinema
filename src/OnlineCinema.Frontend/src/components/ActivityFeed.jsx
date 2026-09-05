@@ -6,6 +6,7 @@ const KIND_LABEL = {
   watched: 'посмотрел',
   rated: 'оценил',
   favorite: 'добавил в избранное',
+  planned: 'планирует посмотреть',
   comment: 'прокомментировал',
   registered: 'зарегистрировался',
 };

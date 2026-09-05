@@ -114,13 +114,17 @@ services:
       RABBIT_HOST: rabbitmq
       RABBIT_USER: ${RABBITMQ_USER}
       RABBIT_PASSWORD: ${RABBITMQ_PASS}
-      RabbitMQ_HOST: rabbitmq
       CONSUMER_ENABLED: "true"
     depends_on:
       rabbitmq:
         condition: service_healthy
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     networks:
       - onlinecinema_network
 

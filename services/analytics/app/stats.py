@@ -9,24 +9,31 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
 
-from .settings import settings
 from .recommender import _engine
+from .settings import settings
 
 SCHEMA = settings.pg_schema
 
 
 def trending(window_hours: int = 7 * 24) -> list[dict]:
-    """Что смотрят/оценивают последние N часов."""
+    """Что смотрят/оценивают последние N часов (с названиями из каталога)."""
     since = datetime.datetime.now(ZoneInfo("UTC")) - datetime.timedelta(hours=window_hours)
     q = text(
         f"""
-        SELECT content_type, content_id,
-               SUM(views) AS views,
-               SUM(watch_seconds) AS watch_seconds
-        FROM "{SCHEMA}".content_stats
-        WHERE bucket_hour >= :since
-        GROUP BY content_type, content_id
-        ORDER BY (SUM(views) + SUM(watch_seconds)/1800.0) DESC
+        WITH agg AS (
+            SELECT content_type, content_id,
+                   SUM(views) AS views,
+                   SUM(watch_seconds) AS watch_seconds
+            FROM "{SCHEMA}".content_stats
+            WHERE bucket_hour >= :since
+            GROUP BY content_type, content_id
+        )
+        SELECT a.content_type, a.content_id, a.views, a.watch_seconds,
+               COALESCE(m."Title", s."Title") AS title
+        FROM agg a
+        LEFT JOIN "Movies" m ON m."Id" = a.content_id AND a.content_type = 'movie'
+        LEFT JOIN "Series" s ON s."Id" = a.content_id AND a.content_type = 'series'
+        ORDER BY (a.views + a.watch_seconds/1800.0) DESC
         LIMIT 12
         """
     )
