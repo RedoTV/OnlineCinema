@@ -14,10 +14,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+from . import activity, recommender, stats
 from .db import init_schema
 from .events import consumer_loop
 from .settings import settings
-from . import stats, activity, recommender
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("analytics")

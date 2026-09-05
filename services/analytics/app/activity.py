@@ -2,8 +2,8 @@
 
 from sqlalchemy import text
 
-from .settings import settings
 from .recommender import _engine
+from .settings import settings
 
 SCHEMA = settings.pg_schema
 

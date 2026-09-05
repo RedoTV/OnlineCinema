@@ -26,7 +26,7 @@ export const AnalyticsDashboard = () => {
   };
 
   useEffect(() => {
-    analyticsApi.get('/health').then(() => setReady(true)).catch(() => setError('Analytics-сервис недоступен. Подними через docker compose --profile full up'));
+    analyticsApi.get('/health').then(() => setReady(true)).catch(() => setError('Analytics-сервис недоступен. Подними через docker compose up -d'));
     load();
   }, [window]);
 
@@ -58,8 +58,8 @@ export const AnalyticsDashboard = () => {
               <li key={i} className="flex justify-between border-b border-gray-200 py-1">
                 <span>
                   <span className="font-bold mr-2">{i + 1}.</span>
-                  <Link to={`/movie/${t.content_id}`} className="hover:underline">
-                    {t.content_type === 'movie' ? 'Фильм' : 'Сериал'} #{t.content_id}
+                  <Link to={t.content_type === 'movie' ? `/movie/${t.content_id}` : `/series/${t.content_id}`} className="hover:underline">
+                    {t.title || `${t.content_type === 'movie' ? 'Фильм' : 'Сериал'} #${t.content_id}`}
                   </Link>
                 </span>
                 <span>👁 {fmt(t.views)} · {fmt(t.watch_seconds)}с</span>

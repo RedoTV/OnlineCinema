@@ -70,12 +70,16 @@ docker compose up → смоук. На теги `v*` выпускается ре
 src/
   OnlineCinema.Backend/   # ASP.NET Core 10 API
   OnlineCinema.Frontend/  # React + Vite + Tailwind
+services/
+  analytics/            # Python/FastAPI сервис событий и рекомендаций (uv)
 tests/
   OnlineCinema.Backend.Tests/
 scripts/                  # смоук-тест, README по тестированию
 docs/
   postman/                # коллекция Postman
 ```
+
+Подробнее про аналитику: `services/analytics/README.md`.
 
 ## Ветки
 
