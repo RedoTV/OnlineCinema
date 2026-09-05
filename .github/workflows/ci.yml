@@ -65,6 +65,7 @@ jobs:
         run: |
           cp .env.example .env
           sed -i 's/change_me/ci_secret_value/g' .env
+          sed -i 's/^JwtSettings__Secret=.*/JwtSettings__Secret=ci_secret_value_at_least_32_chars_long/' .env
           sed -i 's/^FRONTEND_URL=.*/FRONTEND_URL=http:\/\/localhost:3000/' .env
           sed -i 's/^SEED_DEMO_DATA=.*/SEED_DEMO_DATA=true/' .env
 
