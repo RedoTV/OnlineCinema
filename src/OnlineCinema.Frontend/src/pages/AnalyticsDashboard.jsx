@@ -114,7 +114,14 @@ export const AnalyticsDashboard = () => {
         <section>
           <h2 className="text-xl font-bold border-b-2 border-black mb-3 pb-1">ТРЕНДЫ (по просмотрам+времени)</h2>
           <ol className="space-y-1 text-sm">
-            {trending.map((t, i) => (
+            {trending.map((t, i) => {
+              // Нулевые метрики прячем, а не показываем «👁 0 · 0с»:
+              // строка из одних оценок иначе выглядит сломанной.
+              const bits = [];
+              if (Number(t.views) > 0) bits.push(`👁 ${fmt(t.views)}`);
+              if (Number(t.watch_seconds) > 0) bits.push(`${fmt(t.watch_seconds)}с`);
+              if (Number(t.avg_grade) > 0) bits.push(`★ ${Number(t.avg_grade).toFixed(1)}`);
+              return (
               <li key={i} className="flex justify-between border-b border-gray-200 py-1">
                 <span>
                   <span className="font-bold mr-2">{i + 1}.</span>
@@ -122,9 +129,10 @@ export const AnalyticsDashboard = () => {
                     {t.title || `${t.content_type === 'movie' ? 'Фильм' : 'Сериал'} #${t.content_id}`}
                   </Link>
                 </span>
-                <span>👁 {fmt(t.views)} · {fmt(t.watch_seconds)}с</span>
+                <span>{bits.join(' · ')}</span>
               </li>
-            ))}
+              );
+            })}
             {ready && trending.length === 0 && <li className="italic text-gray-500">Событий пока нет — посмотри что-нибудь 😉</li>}
           </ol>
         </section>

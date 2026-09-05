@@ -16,24 +16,35 @@ SCHEMA = settings.pg_schema
 
 
 def trending(window_hours: int = 7 * 24) -> list[dict]:
-    """Что смотрят/оценивают последние N часов (с названиями из каталога)."""
+    """Что смотрят/оценивают последние N часов (с названиями из каталога).
+
+    Оценки тоже двигают тренд: иначе строка только с оценками (views=0)
+    выглядит сломанной — «👁 0 · 0с». Поэтому отдаём rating_count/avg_grade
+    и ранжируем по сумме views + время + оценки.
+    """
     since = datetime.datetime.now(ZoneInfo("UTC")) - datetime.timedelta(hours=window_hours)
     q = text(
         f"""
         WITH agg AS (
             SELECT content_type, content_id,
                    SUM(views) AS views,
-                   SUM(watch_seconds) AS watch_seconds
+                   SUM(watch_seconds) AS watch_seconds,
+                   SUM(rating_count) AS rating_count,
+                   CASE WHEN SUM(rating_count) > 0
+                        THEN SUM(rating_sum)::float / SUM(rating_count)
+                   END AS avg_grade
             FROM "{SCHEMA}".content_stats
             WHERE bucket_hour >= :since
             GROUP BY content_type, content_id
         )
         SELECT a.content_type, a.content_id, a.views, a.watch_seconds,
+               a.rating_count, a.avg_grade,
                COALESCE(m."Title", s."Title") AS title
         FROM agg a
         LEFT JOIN "Movies" m ON m."Id" = a.content_id AND a.content_type = 'movie'
         LEFT JOIN "Series" s ON s."Id" = a.content_id AND a.content_type = 'series'
-        ORDER BY (a.views + a.watch_seconds/1800.0) DESC
+        WHERE a.views > 0 OR a.watch_seconds > 0 OR a.rating_count > 0
+        ORDER BY (a.views + a.watch_seconds/1800.0 + a.rating_count) DESC
         LIMIT 12
         """
     )
