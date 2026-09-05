@@ -19,14 +19,11 @@ public class MovieService : IMovieService
         _storage = storage;
     }
 
-    public async Task<IEnumerable<MovieDto>> GetAllAsync(string? search, int? genreId)
+    public async Task<IEnumerable<MovieSummaryDto>> GetAllAsync(string? search, int? genreId)
     {
-        var query = _context.Movies
-            .Include(m => m.Genres)
-            .Include(m => m.Actors)
-            .Include(m => m.Ratings)
-            .AsNoTracking()
-            .AsQueryable();
+        // Списочная проекция одним SQL-запросом: без Include жанров/актёров/оценок
+        // (раньше это раздувало полезную нагрузку декартовым произведением).
+        var query = _context.Movies.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(m => m.Title.ToLower().Contains(search.ToLower()));
@@ -34,8 +31,20 @@ public class MovieService : IMovieService
         if (genreId.HasValue)
             query = query.Where(m => m.Genres.Any(g => g.Id == genreId));
 
-        var movies = await query.ToListAsync();
-        return _mapper.Map<IEnumerable<MovieDto>>(movies);
+        return await query
+            .OrderBy(m => m.Id)
+            .Select(m => new MovieSummaryDto
+            {
+                Id = m.Id,
+                Title = m.Title,
+                Description = m.Description,
+                ReleaseYear = m.ReleaseYear,
+                Duration = m.Duration,
+                PosterUrl = m.PosterUrl,
+                AverageRating = m.Ratings.Any() ? m.Ratings.Average(r => r.RatingValue) : 0,
+                HasVideo = !string.IsNullOrEmpty(m.VideoUrl)
+            })
+            .ToListAsync();
     }
 
     public async Task<MovieDto?> GetByIdAsync(int id)

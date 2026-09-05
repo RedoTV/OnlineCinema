@@ -17,7 +17,7 @@ public class SeriesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<SeriesDto>>> GetSeries([FromQuery] string? search, [FromQuery] int? genreId)
+    public async Task<ActionResult<IEnumerable<SeriesSummaryDto>>> GetSeries([FromQuery] string? search, [FromQuery] int? genreId)
     {
         return Ok(await _seriesService.GetAllAsync(search, genreId));
     }

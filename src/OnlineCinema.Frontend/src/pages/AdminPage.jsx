@@ -84,8 +84,8 @@ export function AdminPage() {
   };
 
   const content = useMemo(() => [
-    ...data.movies.map(x => ({ ...x, kind: 'movie', typeLabel: 'Фильм', seasonsTotal: null, episodesTotal: null, hasVideo: Boolean(x.videoUrl) })),
-    ...data.series.map(x => ({ ...x, kind: 'series', typeLabel: 'Сериал', seasonsTotal: x.seasonsCount ?? x.seasons?.length ?? 0, episodesTotal: x.seasons?.reduce((n, s) => n + (s.episodes?.length || 0), 0) ?? 0, hasVideo: x.seasons?.some(s => s.episodes?.some(ep => ep.videoUrl)) ?? false })),
+    ...data.movies.map(x => ({ ...x, kind: 'movie', typeLabel: 'Фильм', seasonsTotal: null, episodesTotal: null, hasVideo: Boolean(x.hasVideo ?? x.videoUrl) })),
+    ...data.series.map(x => ({ ...x, kind: 'series', typeLabel: 'Сериал', seasonsTotal: x.seasonsCount ?? x.seasons?.length ?? 0, episodesTotal: x.episodesCount ?? x.seasons?.reduce((n, s) => n + (s.episodes?.length || 0), 0) ?? 0, hasVideo: Boolean(x.hasVideo ?? x.seasons?.some(s => s.episodes?.some(ep => ep.videoUrl))) })),
   ].filter(x => (catalogType === 'all' || x.kind === catalogType)
     && (!catalogSearch || `${x.title} ${x.description || ''} ${x.releaseYear || ''}`.toLowerCase().includes(catalogSearch.toLowerCase()))
     && (mediaFilter === 'all' || (mediaFilter === 'poster' && x.posterUrl) || (mediaFilter === 'no-poster' && !x.posterUrl) || (mediaFilter === 'video' && x.hasVideo) || (mediaFilter === 'no-video' && !x.hasVideo))), [data.movies, data.series, catalogType, catalogSearch, mediaFilter]);
