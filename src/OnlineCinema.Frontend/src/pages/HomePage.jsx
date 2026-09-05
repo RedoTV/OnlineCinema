@@ -97,7 +97,7 @@ export const HomePage = () => {
             <Link to={`/movie/${movie.id}`} key={movie.id} className="group block border-2 border-black hover:bg-black hover:text-white transition-colors duration-200">
               <div className="relative aspect-[2/3] w-full overflow-hidden border-b-2 border-black group-hover:border-white">
                 <PosterImage
-                  src={movie.posterUrl ? `/api/Media/poster/${movie.id}` : null}
+                  src={movie.posterUrl ? `/api/Media/poster/${movie.id}?size=preview` : null}
                   alt={movie.title}
                   eager={i < 4}
                 />

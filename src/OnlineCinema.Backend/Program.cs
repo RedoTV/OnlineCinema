@@ -24,6 +24,7 @@ builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<IPlaybackService, PlaybackService>();
 builder.Services.AddScoped<SampleMediaImporter>();
 builder.Services.AddSingleton<IStorageService, MinioStorageService>();
+builder.Services.AddScoped<IPosterPreviewService, PosterPreviewService>();
 
 // шина событий (RabbitMQ). Деградирует если брокер недоступен — не валит старт.
 builder.Services.AddSingleton<OnlineCinema.Backend.Events.IEventPublisher, OnlineCinema.Backend.Events.RabbitMqEventPublisher>();
