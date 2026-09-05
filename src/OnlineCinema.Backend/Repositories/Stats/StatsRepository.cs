@@ -36,7 +36,7 @@ public class StatsRepository : IStatsRepository
 
     public Task<List<GenreStatRow>> GetGenreStatsAsync(CancellationToken ct = default) =>
         _db.Genres
+            .OrderByDescending(g => g.Movies.Count)
             .Select(g => new GenreStatRow(g.Name, g.Movies.Count))
-            .OrderByDescending(x => x.MovieCount)
             .ToListAsync(ct);
 }
