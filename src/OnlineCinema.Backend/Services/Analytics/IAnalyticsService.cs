@@ -8,4 +8,5 @@ public interface IAnalyticsService
     Task<OverviewRow> GetOverviewAsync(CancellationToken ct = default);
     Task<List<ActivityRow>> GetActivityAsync(int? userId, int limit, CancellationToken ct = default);
     Task<List<PickRow>> GetPicksAsync(int userId, int count, CancellationToken ct = default);
+    Task<DashboardFeed> GetDashboardAsync(string? contentType, int? genreId, TimeSpan window, CancellationToken ct = default);
 }
