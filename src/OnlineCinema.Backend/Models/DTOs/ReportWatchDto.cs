@@ -8,4 +8,7 @@ public class ReportWatchDto
 
     // Примерный объём просмотра, сек (для отрисовки в активности).
     public double WatchedSeconds { get; set; }
+
+    // Устойчивый id браузера зрителя (гости и залогиненные).
+    public string? ViewerKey { get; set; }
 }
