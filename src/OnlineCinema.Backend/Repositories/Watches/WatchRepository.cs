@@ -16,5 +16,11 @@ public class WatchRepository : IWatchRepository
     public Task<bool> HasEpisodeAsync(int episodeId, CancellationToken ct = default) =>
         _db.Episodes.AnyAsync(e => e.Id == episodeId, ct);
 
+    public Task<UserWatch?> FindAsync(int? userId, string? viewerKey, int? movieId, int? episodeId, CancellationToken ct = default) =>
+        _db.UserWatches.FirstOrDefaultAsync(w =>
+            w.MovieId == movieId &&
+            w.EpisodeId == episodeId &&
+            (userId.HasValue ? w.UserId == userId.Value : w.UserId == null && w.ViewerKey == viewerKey), ct);
+
     public void Add(UserWatch watch) => _db.UserWatches.Add(watch);
 }

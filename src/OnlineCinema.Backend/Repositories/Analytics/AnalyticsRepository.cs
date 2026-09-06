@@ -14,9 +14,16 @@ public class AnalyticsRepository : IAnalyticsRepository
         var movies = await _db.Movies.CountAsync(ct);
         var series = await _db.Series.CountAsync(ct);
         // Активные зрители: те, кто реально что-то смотрел (UserWatches) либо оценивал.
-        var activeUsers = await _db.UserWatches.Select(w => w.UserId).Distinct()
-            .Union(_db.Ratings.Select(r => r.UserId))
-            .CountAsync(ct);
+        // Гости без аккаунта (UserId = null) различаются по ViewerKey.
+        var watchViewers = await _db.UserWatches
+            .Select(w => w.UserId != null ? ("u" + w.UserId) : ("g" + w.ViewerKey))
+            .Distinct()
+            .ToListAsync(ct);
+        var ratingViewers = await _db.Ratings
+            .Select(r => "u" + r.UserId)
+            .Distinct()
+            .ToListAsync(ct);
+        var activeUsers = watchViewers.Union(ratingViewers).Count();
         var watches = await _db.UserWatches.CountAsync(ct);
         var ratings = await _db.Ratings.CountAsync(ct);
         return new OverviewRow(movies, series, activeUsers, watches, ratings);
@@ -108,7 +115,7 @@ public class AnalyticsRepository : IAnalyticsRepository
                 .Where(w => w.UserId == userId.Value)
                 .Select(w => new
                 {
-                    w.User.Username,
+                    Username = w.User == null ? "Гость" : w.User.Username,
                     w.WatchedAt,
                     w.MovieId,
                     w.EpisodeId,
@@ -120,7 +127,7 @@ public class AnalyticsRepository : IAnalyticsRepository
             : await _db.UserWatches
                 .Select(w => new
                 {
-                    w.User.Username,
+                    Username = w.User == null ? "Гость" : w.User.Username,
                     w.WatchedAt,
                     w.MovieId,
                     w.EpisodeId,
@@ -238,8 +245,8 @@ public class AnalyticsRepository : IAnalyticsRepository
         public int RangeWatches;
         public double WatchSeconds;
         public double RangeWatchSeconds;
-        public HashSet<int> Users = new();
-        public HashSet<int> RangeUsers = new();
+        public HashSet<string> Users = new();
+        public HashSet<string> RangeUsers = new();
     }
 
     private sealed class RatingAcc
@@ -305,13 +312,19 @@ public class AnalyticsRepository : IAnalyticsRepository
         var epSeriesMap = episodeSeriesId.ToDictionary(e => e.Id, e => e.SeriesId);
 
         var allWatches = await _db.UserWatches
-            .Select(w => new { w.Id, w.UserId, w.MovieId, w.EpisodeId, w.WatchedSeconds, w.WatchedAt })
+            .Select(w => new { w.Id, w.UserId, w.ViewerKey, w.MovieId, w.EpisodeId, w.WatchedSeconds, w.WatchedAt })
             .ToListAsync(ct);
 
         var movieAcc = new Dictionary<int, Acc>();
         var seriesAcc = new Dictionary<int, Acc>();
-        var allViewers = new HashSet<int>();
-        var rangeViewers = new HashSet<int>();
+        // Зритель = залогиненный (UserId) либо гость (ViewerKey). Без ключа —
+        // крайний случай, считаем строкой по Id эвента, чтобы не терять факт.
+        static string ViewerOf(int? userId, string? viewerKey, int id) =>
+            userId.HasValue ? "u" + userId.Value
+            : !string.IsNullOrEmpty(viewerKey) ? "g" + viewerKey
+            : "w" + id;
+        var allViewers = new HashSet<string>();
+        var rangeViewers = new HashSet<string>();
         double totalSeconds = 0, rangeSeconds = 0;
 
         foreach (var w in allWatches)
@@ -323,16 +336,17 @@ public class AnalyticsRepository : IAnalyticsRepository
             if (!isMovie && !seriesKey.HasValue) continue; // «пустой» эвент
 
             var inRange = w.WatchedAt >= since;
-            allViewers.Add(w.UserId);
-            if (inRange) rangeViewers.Add(w.UserId);
+            var viewer = ViewerOf(w.UserId, w.ViewerKey, w.Id);
+            allViewers.Add(viewer);
+            if (inRange) rangeViewers.Add(viewer);
 
             if (isMovie)
             {
                 key = w.MovieId!.Value;
                 if (!movieAcc.TryGetValue(key, out var a)) { a = new Acc(); movieAcc[key] = a; }
                 a.Watches++; a.WatchSeconds += w.WatchedSeconds;
-                a.Users.Add(w.UserId);
-                if (inRange) { a.RangeWatches++; a.RangeWatchSeconds += w.WatchedSeconds; a.RangeUsers.Add(w.UserId); }
+                a.Users.Add(viewer);
+                if (inRange) { a.RangeWatches++; a.RangeWatchSeconds += w.WatchedSeconds; a.RangeUsers.Add(viewer); }
                 totalSeconds += w.WatchedSeconds;
                 if (inRange) rangeSeconds += w.WatchedSeconds;
             }
@@ -341,8 +355,8 @@ public class AnalyticsRepository : IAnalyticsRepository
                 key = seriesKey!.Value;
                 if (!seriesAcc.TryGetValue(key, out var a)) { a = new Acc(); seriesAcc[key] = a; }
                 a.Watches++; a.WatchSeconds += w.WatchedSeconds;
-                a.Users.Add(w.UserId);
-                if (inRange) { a.RangeWatches++; a.RangeWatchSeconds += w.WatchedSeconds; a.RangeUsers.Add(w.UserId); }
+                a.Users.Add(viewer);
+                if (inRange) { a.RangeWatches++; a.RangeWatchSeconds += w.WatchedSeconds; a.RangeUsers.Add(viewer); }
                 totalSeconds += w.WatchedSeconds;
                 if (inRange) rangeSeconds += w.WatchedSeconds;
             }

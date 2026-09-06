@@ -13,11 +13,16 @@ public class UserWatchConfiguration : IEntityTypeConfiguration<UserWatch>
         // Быстрые выборки «просмотры юзера» и «просмотры контента в окне».
         builder.HasIndex(e => e.WatchedAt);
         builder.HasIndex(e => new { e.MovieId, e.WatchedAt });
+        builder.HasIndex(e => e.ViewerKey);
+
+        builder.Property(e => e.UserId).IsRequired(false);
+        builder.Property(e => e.ViewerKey).HasMaxLength(64).IsRequired(false);
 
         builder.HasOne(w => w.User)
             .WithMany(u => u.UserWatches)
             .HasForeignKey(w => w.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Cascade)
+            .IsRequired(false);
 
         builder.HasOne(w => w.Movie)
             .WithMany()

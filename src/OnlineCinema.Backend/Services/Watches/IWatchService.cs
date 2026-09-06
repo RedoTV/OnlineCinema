@@ -2,5 +2,6 @@ namespace OnlineCinema.Backend.Services.Watches;
 
 public interface IWatchService
 {
-    Task<bool> ReportAsync(int userId, int? movieId, int? episodeId, double watchedSeconds, CancellationToken ct = default);
+    // userId = null — анонимный просмотр гостя (различаем по viewerKey).
+    Task<bool> ReportAsync(int? userId, string? viewerKey, int? movieId, int? episodeId, double watchedSeconds, CancellationToken ct = default);
 }
