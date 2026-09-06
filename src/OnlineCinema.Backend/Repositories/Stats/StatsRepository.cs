@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using OnlineCinema.Backend.Data;
-using OnlineCinema.Backend.Models.Enums;
 
 namespace OnlineCinema.Backend.Repositories.Stats;
 
@@ -23,9 +22,9 @@ public class StatsRepository : IStatsRepository
             .ToListAsync(ct);
 
     public Task<List<MostWatchedRow>> GetMostWatchedAsync(int count, CancellationToken ct = default) =>
-        _db.UserMovieStatuses
-            .Where(s => s.Status == MovieStatus.Watched)
-            .GroupBy(s => s.MovieId)
+        _db.UserWatches
+            .Where(w => w.MovieId != null)
+            .GroupBy(w => w.MovieId!.Value)
             .OrderByDescending(g => g.Count())
             .Take(count)
             .Select(g => new MostWatchedRow(

@@ -14,4 +14,5 @@ public class Episode
 
     public Season Season { get; set; } = null!;
     public ICollection<PlaybackProgress> PlaybackProgresses { get; set; } = new List<PlaybackProgress>();
+    public ICollection<UserWatch> UserWatches { get; set; } = new List<UserWatch>();
 }
