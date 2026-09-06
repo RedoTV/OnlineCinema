@@ -11,13 +11,6 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
       },
-      // analytics-сервис (FastAPI) в dev. Префикс /api/analytics, чтобы
-      // не перехватывать SPA-роут /analytics (та же причина, что в nginx.conf).
-      '/api/analytics': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/analytics/, ''),
-      },
     },
   },
 })

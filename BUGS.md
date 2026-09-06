@@ -23,18 +23,17 @@
 17. **Analytics без обвязки:** нет README, нет healthcheck в compose, CI не гонял `uv`-тесты. Добавлены `services/analytics/README.md`, healthcheck `/health`, CI-job `test-analytics` (pytest + ruff).
 18. **Страница `/analytics` не открывалась:** префикс `location /analytics/` в nginx перехватывал SPA-роут дашборда — nginx 301-редиректил на `http://localhost/analytics/` с потерей порта, а `/analytics/` уходило в API (404 от FastAPI). API переехало на `/api/analytics/`, страница снова отдаёт SPA 200. Заодно: лента обогащена `ref_title` из каталога (вместо голых `#id`), в рекомендациях видна причина, у дашборда появились loading/error/retry вместо тихих пустот.
 19. **Тренд «👁 0 · 0с» выглядел сломанным:** оценка создавала агрегат с `views=0`, а формула тренда оценки игнорировала. `/stats/trending` теперь отдаёт `rating_count`/`avg_grade`, ранжирует с их учётом, фронт показывает `★ 9.0` и прячет нулевые метрики.
+20. **Аналитика переехала в .NET, шина и Python-сервис удалены:** виджеты трендов/топов/жанров/активности и подборки по любимым жанрам теперь считаются живыми EF-запросами в `AnalyticsController`/`AnalyticsRepository` по таблицам каталога. Удалены Python `services/analytics`, RabbitMQ-шина (`Events/`, publisher, `RabbitMQ.Client`), событийная схема и связанные dockr/CI/фронт-клиенты. Стек — 4 контейнера: PostgreSQL, MinIO, backend, frontend/nginx.
 
 ## Проверка
 
-- Все 6 контейнеров Up: PostgreSQL и MinIO healthy, RabbitMQ healthy, backend, frontend/nginx, analytics.
-- .NET Release tests: **6/6**; analytics `uv run pytest`: **13/13** (+ `ruff check` чист); frontend production build: passed.
-- API smoke: **16/16** (auth, movies, series structure, rating/status, comments/replies/likes, stats, streaming contract).
-- Admin login и API: dashboard/comments/ratings 200; movie create/update/delete 201/200/204; comment hide/approve 200.
-- Frontend `/`, `/admin`; nginx API and analytics proxy: 200.
-- Analytics health, overview, genres, activity, recommendations: 200.
+- Все 4 контейнера Up: PostgreSQL и MinIO healthy, backend, frontend/nginx.
+- .NET Release tests: **6/6**; frontend production build: passed.
+- API smoke: auth, movies, series, ratings/status, comments, stats, streaming, analytics overview/trending/genres/activity/picks — 200.
+- Admin login и API: dashboard/comments/ratings; movie create/update/delete.
+- Frontend `/`, `/analytics`, `/admin`; nginx `/api` proxy: 200.
 - Media proxy: poster redirects to same-origin `/media/...`; byte range returns 206.
-- RabbitMQ: durable topic exchange `cinema.events`; published smoke events consumed, analytics `processed_events` grows.
-- Fresh logs contain no `PoolClosed`, password-auth, upstream DNS, missing-exchange, unhandled or SigV4/403 errors.
+- Fresh logs contain no unhandled or SigV4/403 errors.
 
 ## Осознанные ограничения
 

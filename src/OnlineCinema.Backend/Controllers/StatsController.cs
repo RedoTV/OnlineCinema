@@ -3,8 +3,7 @@ using OnlineCinema.Backend.Services.Stats;
 
 namespace OnlineCinema.Backend.Controllers;
 
-// Базовая статистика читает данные напрямую из основной БД.
-// Событийные агрегаты и рекомендации доступны через analytics-сервис.
+// Базовая статистика каталога. Событийные тренды/активность/подборки — в AnalyticsController.
 [ApiController]
 [Route("api/[controller]")]
 public class StatsController : ControllerBase

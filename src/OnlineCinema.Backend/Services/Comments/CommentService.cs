@@ -1,4 +1,3 @@
-using OnlineCinema.Backend.Events;
 using OnlineCinema.Backend.Models;
 using OnlineCinema.Backend.Models.DTOs.Comments;
 using OnlineCinema.Backend.Repositories.Comments;
@@ -10,13 +9,11 @@ public class CommentService : ICommentService
 {
     private readonly ICommentRepository _comments;
     private readonly IUnitOfWork _uow;
-    private readonly IEventPublisher _publisher;
 
-    public CommentService(ICommentRepository comments, IUnitOfWork uow, IEventPublisher publisher)
+    public CommentService(ICommentRepository comments, IUnitOfWork uow)
     {
         _comments = comments;
         _uow = uow;
-        _publisher = publisher;
     }
 
     public async Task<IEnumerable<CommentDto>> GetCommentsAsync(int? movieId, int? seriesId, string? sort, int? userId)
@@ -54,15 +51,6 @@ public class CommentService : ICommentService
         // подгружаем юзера для ответа
         await _comments.LoadUserAsync(comment);
 
-        await _publisher.PublishAsync("comment.created", new
-        {
-            userId,
-            commentId = comment.Id,
-            movieId = comment.MovieId,
-            seriesId = comment.SeriesId,
-            parentId = comment.ParentId,
-            happenedAt = comment.CreatedAt
-        });
         return ToDto(comment, userId);
     }
 
