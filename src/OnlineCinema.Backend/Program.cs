@@ -4,6 +4,7 @@ using Microsoft.OpenApi.Models;
 using OnlineCinema.Backend.Data;
 using OnlineCinema.Backend.Repositories.Actors;
 using OnlineCinema.Backend.Repositories.Admin;
+using OnlineCinema.Backend.Repositories.Analytics;
 using OnlineCinema.Backend.Repositories.Comments;
 using OnlineCinema.Backend.Repositories.Genres;
 using OnlineCinema.Backend.Repositories.Movies;
@@ -14,6 +15,7 @@ using OnlineCinema.Backend.Repositories.UnitOfWork;
 using OnlineCinema.Backend.Repositories.UserActions;
 using OnlineCinema.Backend.Repositories.Users;
 using OnlineCinema.Backend.Services.Actors;
+using OnlineCinema.Backend.Services.Analytics;
 using OnlineCinema.Backend.Services.Admin;
 using OnlineCinema.Backend.Services.Auth;
 using OnlineCinema.Backend.Services.Comments;
@@ -47,6 +49,7 @@ builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 builder.Services.AddScoped<IPlaybackRepository, PlaybackRepository>();
 builder.Services.AddScoped<IAdminRepository, AdminRepository>();
 builder.Services.AddScoped<IStatsRepository, StatsRepository>();
+builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -59,13 +62,11 @@ builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<IPlaybackService, PlaybackService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<IStatsService, StatsService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<SampleMediaImporter>();
 builder.Services.AddSingleton<IStorageService, MinioStorageService>();
 builder.Services.AddScoped<IPosterPreviewService, PosterPreviewService>();
-
-// шина событий (RabbitMQ). Деградирует если брокер недоступен — не валит старт.
-builder.Services.AddSingleton<OnlineCinema.Backend.Events.IEventPublisher, OnlineCinema.Backend.Events.RabbitMqEventPublisher>();
 
 // AutoMapper 16 выпилил DI-экстеншн из основного пакета, регистрирую вручную
 builder.Services.AddSingleton<IMapper>(sp =>

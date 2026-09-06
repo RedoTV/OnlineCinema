@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react';
-import { analyticsApi } from '../api/axios';
+import { api } from '../api/axios';
 import { Link } from 'react-router-dom';
 
 const KIND_LABEL = {
   watched: 'посмотрел',
   rated: 'оценил',
-  favorite: 'добавил в избранное',
-  planned: 'планирует посмотреть',
   comment: 'прокомментировал',
-  registered: 'зарегистрировался',
 };
 
 const fmtAgo = (iso) => {
@@ -20,15 +17,14 @@ const fmtAgo = (iso) => {
   return d.toLocaleDateString('ru-RU');
 };
 
-// Живая лента действий (из analytics user_events).
 export const ActivityFeed = ({ userId }) => {
   const [items, setItems] = useState([]);
 
   useEffect(() => {
-    const qs = userId ? `?user_id=${userId}&limit=12` : '?limit=15';
-    analyticsApi.get(`/activity${qs}`)
-      .then(res => setItems(res.data))
-      .catch(() => {});
+    const qs = userId ? `userId=${userId}&limit=12` : 'limit=15';
+    api.get(`/analytics/activity?${qs}`)
+      .then(res => setItems(res.data || []))
+      .catch(() => setItems([]));
   }, [userId]);
 
   return (
@@ -43,14 +39,14 @@ export const ActivityFeed = ({ userId }) => {
             <span>
               <span className="font-bold">{e.actor || 'кто-то'}</span>{' '}
               {KIND_LABEL[e.kind] || e.kind}{' '}
-              {e.ref_type && e.ref_id ? (
-                <Link to={e.ref_type === 'movie' ? `/movie/${e.ref_id}` : `/series/${e.ref_id}`} className="underline">
-                  «{e.ref_title || `#${e.ref_id}`}»
+              {e.refType && e.refId ? (
+                <Link to={e.refType === 'movie' ? `/movie/${e.refId}` : `/series/${e.refId}`} className="underline">
+                  «{e.title || `#${e.refId}`}»
                 </Link>
               ) : null}
               {e.note ? <> · <span className="text-gray-600">{e.note}</span></> : null}
             </span>
-            <span className="text-gray-500 whitespace-nowrap">{fmtAgo(e.happened_at)}</span>
+            <span className="text-gray-500 whitespace-nowrap">{fmtAgo(e.happenedAt)}</span>
           </div>
         ))}
       </div>

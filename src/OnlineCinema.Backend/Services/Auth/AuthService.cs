@@ -3,7 +3,6 @@ using System.Security.Claims;
 using System.Text;
 using AutoMapper;
 using Microsoft.IdentityModel.Tokens;
-using OnlineCinema.Backend.Events;
 using OnlineCinema.Backend.Models;
 using OnlineCinema.Backend.Models.DTOs.Auth;
 using OnlineCinema.Backend.Repositories.UnitOfWork;
@@ -18,15 +17,13 @@ public class AuthService : IAuthService
     private readonly IUnitOfWork _uow;
     private readonly IConfiguration _configuration;
     private readonly IMapper _mapper;
-    private readonly IEventPublisher _publisher;
 
-    public AuthService(IUserRepository users, IUnitOfWork uow, IConfiguration configuration, IMapper mapper, IEventPublisher publisher)
+    public AuthService(IUserRepository users, IUnitOfWork uow, IConfiguration configuration, IMapper mapper)
     {
         _users = users;
         _uow = uow;
         _configuration = configuration;
         _mapper = mapper;
-        _publisher = publisher;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request)
@@ -62,14 +59,6 @@ public class AuthService : IAuthService
         response.Success = true;
         response.Message = "Registration successful";
         response.Token = token;
-
-        await _publisher.PublishAsync("user.registered", new
-        {
-            userId = user.Id,
-            username = user.Username,
-            email = user.Email,
-            happenedAt = DateTime.UtcNow
-        });
 
         return response;
     }

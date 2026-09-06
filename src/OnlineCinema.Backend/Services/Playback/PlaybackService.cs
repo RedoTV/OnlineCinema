@@ -1,4 +1,3 @@
-using OnlineCinema.Backend.Events;
 using OnlineCinema.Backend.Models;
 using OnlineCinema.Backend.Repositories.Playback;
 using OnlineCinema.Backend.Repositories.UnitOfWork;
@@ -9,13 +8,11 @@ public class PlaybackService : IPlaybackService
 {
     private readonly IPlaybackRepository _playback;
     private readonly IUnitOfWork _uow;
-    private readonly IEventPublisher _publisher;
 
-    public PlaybackService(IPlaybackRepository playback, IUnitOfWork uow, IEventPublisher publisher)
+    public PlaybackService(IPlaybackRepository playback, IUnitOfWork uow)
     {
         _playback = playback;
         _uow = uow;
-        _publisher = publisher;
     }
 
     public async Task SaveProgressAsync(int userId, int? movieId, int? episodeId, double position, double duration)
@@ -40,16 +37,6 @@ public class PlaybackService : IPlaybackService
             });
         }
         await _uow.SaveChangesAsync();
-
-        // эвент "досмотрел" публикуем только когда юзер реально дошёл почти до конца
-        // (>=95%), иначе каждый тик прогресса свалится в очередь спамом.
-        if (duration > 0 && position / duration >= 0.95)
-        {
-            if (movieId.HasValue)
-                await _publisher.PublishAsync("movie.watched", new { userId, movieId, watchSeconds = position, happenedAt = DateTime.UtcNow });
-            else if (episodeId.HasValue)
-                await _publisher.PublishAsync("episode.watched", new { userId, episodeId, watchSeconds = position, happenedAt = DateTime.UtcNow });
-        }
     }
 
     public Task<PlaybackProgress?> GetProgressAsync(int userId, int? movieId, int? episodeId) =>

@@ -38,25 +38,6 @@ services:
       timeout: 5s
       retries: 5
 
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    container_name: onlinecinema_rabbitmq
-    restart: always
-    # profile полный — но rabbit поднимается и в базе, чтобы бэкенд мог пушить события
-    networks:
-      - onlinecinema_network
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-
   backend:
     build:
       context: ./src/OnlineCinema.Backend
@@ -74,8 +55,6 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
     networks:
       - onlinecinema_network
 
@@ -92,39 +71,6 @@ services:
         condition: service_started
       minio:
         condition: service_healthy
-      analytics:
-        condition: service_started
-    networks:
-      - onlinecinema_network
-
-  # Analytics входит в демонстрационный стек (Python/FastAPI, зависимости через uv).
-  analytics:
-    build:
-      context: ./services/analytics
-      dockerfile: Dockerfile
-    container_name: onlinecinema_analytics
-    restart: always
-    ports:
-      - "8000:8000"
-    environment:
-      PG_HOST: db
-      PG_DB: ${POSTGRES_DB}
-      PG_USER: ${POSTGRES_USER}
-      PG_PASSWORD: ${POSTGRES_PASSWORD}
-      RABBIT_HOST: rabbitmq
-      RABBIT_USER: ${RABBITMQ_USER}
-      RABBIT_PASSWORD: ${RABBITMQ_PASS}
-      CONSUMER_ENABLED: "true"
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
     networks:
       - onlinecinema_network
 

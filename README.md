@@ -2,9 +2,8 @@
 
 Дипломный проект — агрегатор и стриминговый сервис фильмов и сериалов.
 
-Полиглот-архитектура: ASP.NET Core (.NET 10) бэкенд, React (Vite) фронт,
-PostgreSQL, MinIO (S3-совместимое хранилище), RabbitMQ и Python
-(FastAPI/uv) аналитический сервис. Это единая линия **v2.0**; актуальный
+Единый стек: ASP.NET Core (.NET 10) бэкенд, React (Vite) фронт, PostgreSQL
+и MinIO (S3-совместимое хранилище). Это единая линия **v2.0**; актуальный
 срез опубликован как `v2.0.3`.
 
 ## Возможности
@@ -15,8 +14,8 @@ PostgreSQL, MinIO (S3-совместимое хранилище), RabbitMQ и Py
 - Комментарии с ответами, лайками и модерацией
 - Стриминг видео через presigned-URL из MinIO (по HTTP Range, без
   буферизации на бэкенде) с автоматическим сохранением прогресса
-- Статистика по жанрам и топам из основной БД и отдельный событийный
-  analytics-сервис с рекомендациями
+- Аналитика в самом бэкенде: тренды/жанровые топовые подборки по любимым
+  жанрам и лента активности по данным каталога
 - Плеер на Plyr с сохранением позиции, скоростью, PiP и автопереходом
   к следующему эпизоду
 
@@ -33,7 +32,8 @@ docker compose up -d
 ```
 
 Открой http://localhost:3000 . Бэкенд-API на http://localhost:5000/swagger,
-MinIO-консоль http://localhost:9001 (minioadmin/minioadmin123).
+MinIO-консоль http://localhost:9001 (minioadmin/minioadmin123). Стек —
+4 контейнера: PostgreSQL, MinIO, backend, frontend/nginx.
 
 Если каталог пуст, сначала поставь `SEED_DEMO_DATA=true` в `.env`,
 перезапусти backend и дай ему минуту на сидинг.
@@ -68,18 +68,14 @@ docker compose up → смоук. На теги `v*` выпускается ре
 
 ```
 src/
-  OnlineCinema.Backend/   # ASP.NET Core 10 API
+  OnlineCinema.Backend/   # ASP.NET Core 10 API (каталог, стриминг, аналитика)
   OnlineCinema.Frontend/  # React + Vite + Tailwind
-services/
-  analytics/            # Python/FastAPI сервис событий и рекомендаций (uv)
 tests/
   OnlineCinema.Backend.Tests/
 scripts/                  # смоук-тест, README по тестированию
 docs/
   postman/                # коллекция Postman
 ```
-
-Подробнее про аналитику: `services/analytics/README.md`.
 
 ## Ветки
 
@@ -95,10 +91,8 @@ docs/
   volume (`docker compose down -v`).
 - Для доставки больших видео nginx отключает буферизацию запроса, а
   приложение ограничивает размер видео 10 GiB.
-- Для гарантированной доставки событий RabbitMQ пока нет transactional
-  outbox: при недоступности брокера основная операция продолжает работать.
 
 ---
 
 Made for the diploma defense. **v2.0** объединяет каталог, стриминг,
-администрирование, событийную аналитику и рекомендации.
+администрирование и аналитику.
