@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using OnlineCinema.Backend.Data;
-using OnlineCinema.Backend.Models.Enums;
 
 namespace OnlineCinema.Backend.Repositories.Analytics;
 
@@ -14,12 +13,11 @@ public class AnalyticsRepository : IAnalyticsRepository
     {
         var movies = await _db.Movies.CountAsync(ct);
         var series = await _db.Series.CountAsync(ct);
-        var activeUsers = await _db.Ratings.Select(r => r.UserId).Distinct().CountAsync(ct);
-        var watches = await _db.UserMovieStatuses
-            .Where(s => s.Status == MovieStatus.Watched)
-            .Select(s => s.UserId)
-            .Distinct()
+        // Активные зрители: те, кто реально что-то смотрел (UserWatches) либо оценивал.
+        var activeUsers = await _db.UserWatches.Select(w => w.UserId).Distinct()
+            .Union(_db.Ratings.Select(r => r.UserId))
             .CountAsync(ct);
+        var watches = await _db.UserWatches.CountAsync(ct);
         var ratings = await _db.Ratings.CountAsync(ct);
         return new OverviewRow(movies, series, activeUsers, watches, ratings);
     }
@@ -33,30 +31,32 @@ public class AnalyticsRepository : IAnalyticsRepository
             .Select(r => new { r.MovieId, r.SeriesId, r.RatingValue })
             .ToListAsync(ct);
 
-        var movieWatches = await _db.UserMovieStatuses
-            .Where(s => s.Status == MovieStatus.Watched && s.AddedAt >= since)
-            .GroupBy(s => s.MovieId)
-            .Select(g => new { MovieId = g.Key, Views = g.Count() })
+        // Настоящие просмотры за окно из факт-таблицы UserWatches
+        // (плеер шлёт один эвент на реально досмотренный контент).
+        var movieWatchRows = await _db.UserWatches
+            .Where(w => w.MovieId != null && w.WatchedAt >= since)
+            .GroupBy(w => w.MovieId!.Value)
+            .Select(g => new { ContentId = g.Key, Views = g.Count() })
             .ToListAsync(ct);
 
-        var episodeWatches = await _db.PlaybackProgresses
-            .Where(p => p.EpisodeId != null && p.UpdatedAt >= since)
-            .GroupBy(p => p.Episode!.Season.SeriesId)
+        var seriesWatchRows = await _db.UserWatches
+            .Where(w => w.EpisodeId != null && w.WatchedAt >= since)
+            .GroupBy(w => w.Episode!.Season.SeriesId)
             .Select(g => new { SeriesId = g.Key, Views = g.Count() })
             .ToListAsync(ct);
 
         var rows = new List<TrendingRow>();
 
-        foreach (var watched in movieWatches)
+        foreach (var watched in movieWatchRows)
         {
-            var rs = ratingRows.Where(r => r.MovieId == watched.MovieId).ToList();
-            var title = await _db.Movies.Where(m => m.Id == watched.MovieId)
-                .Select(m => m.Title).FirstOrDefaultAsync(ct) ?? $"Материал {watched.MovieId}";
-            rows.Add(new TrendingRow("movie", watched.MovieId, title, watched.Views, 0,
+            var rs = ratingRows.Where(r => r.MovieId == watched.ContentId).ToList();
+            var title = await _db.Movies.Where(m => m.Id == watched.ContentId)
+                .Select(m => m.Title).FirstOrDefaultAsync(ct) ?? $"Материал {watched.ContentId}";
+            rows.Add(new TrendingRow("movie", watched.ContentId, title, watched.Views, 0,
                 rs.Count, rs.Count > 0 ? rs.Average(r => (double)r.RatingValue) : null));
         }
 
-        foreach (var eps in episodeWatches)
+        foreach (var eps in seriesWatchRows)
         {
             var seriesRatings = ratingRows.Where(r => r.SeriesId == eps.SeriesId).ToList();
             var title = await _db.Series.Where(s => s.Id == eps.SeriesId)
@@ -67,7 +67,7 @@ public class AnalyticsRepository : IAnalyticsRepository
         }
 
         foreach (var movieId in ratingRows.Where(r => r.MovieId != null).Select(r => r.MovieId!.Value)
-                     .Except(movieWatches.Select(w => w.MovieId)).Distinct())
+                     .Except(movieWatchRows.Select(w => w.ContentId)).Distinct())
         {
             var mr = ratingRows.Where(r => r.MovieId == movieId).ToList();
             var title = await _db.Movies.Where(m => m.Id == movieId)
@@ -77,7 +77,7 @@ public class AnalyticsRepository : IAnalyticsRepository
         }
 
         foreach (var seriesId in ratingRows.Where(r => r.SeriesId != null).Select(r => r.SeriesId!.Value)
-                     .Except(episodeWatches.Select(w => w.SeriesId)).Distinct())
+                     .Except(seriesWatchRows.Select(w => w.SeriesId)).Distinct())
         {
             var sr = ratingRows.Where(r => r.SeriesId == seriesId).ToList();
             var title = await _db.Series.Where(s => s.Id == seriesId)
@@ -104,13 +104,30 @@ public class AnalyticsRepository : IAnalyticsRepository
                 .ToListAsync(ct);
 
         var watched = userId.HasValue
-            ? await _db.UserMovieStatuses
-                .Where(s => s.UserId == userId.Value && s.Status == MovieStatus.Watched)
-                .Select(s => new { s.User!.Username, s.AddedAt, s.MovieId })
+            ? await _db.UserWatches
+                .Where(w => w.UserId == userId.Value)
+                .Select(w => new
+                {
+                    w.User.Username,
+                    w.WatchedAt,
+                    w.MovieId,
+                    w.EpisodeId,
+                    EpisodeSeriesId = w.Episode == null ? (int?)null : w.Episode.Season.SeriesId,
+                    MovieTitle = w.Movie != null ? w.Movie.Title : null,
+                    SeriesTitle = w.Episode != null ? w.Episode.Season.Series.Title : null,
+                })
                 .ToListAsync(ct)
-            : await _db.UserMovieStatuses
-                .Where(s => s.Status == MovieStatus.Watched)
-                .Select(s => new { s.User!.Username, s.AddedAt, s.MovieId })
+            : await _db.UserWatches
+                .Select(w => new
+                {
+                    w.User.Username,
+                    w.WatchedAt,
+                    w.MovieId,
+                    w.EpisodeId,
+                    EpisodeSeriesId = w.Episode == null ? (int?)null : w.Episode.Season.SeriesId,
+                    MovieTitle = w.Movie != null ? w.Movie.Title : null,
+                    SeriesTitle = w.Episode != null ? w.Episode.Season.Series.Title : null,
+                })
                 .ToListAsync(ct);
 
         var comments = userId.HasValue
@@ -136,9 +153,14 @@ public class AnalyticsRepository : IAnalyticsRepository
 
         foreach (var s in watched)
         {
-            var title = await _db.Movies.Where(m => m.Id == s.MovieId)
-                .Select(m => m.Title).FirstOrDefaultAsync(ct);
-            activities.Add(new ActivityRow(s.Username, "watched", "movie", s.MovieId, title, null, s.AddedAt));
+            if (s.MovieId.HasValue)
+            {
+                activities.Add(new ActivityRow(s.Username, "watched", "movie", s.MovieId, s.MovieTitle, null, s.WatchedAt));
+            }
+            else if (s.EpisodeId.HasValue)
+            {
+                activities.Add(new ActivityRow(s.Username, "watched", "series", s.EpisodeSeriesId, s.SeriesTitle, null, s.WatchedAt));
+            }
         }
 
         foreach (var c in comments)
@@ -167,6 +189,8 @@ public class AnalyticsRepository : IAnalyticsRepository
                 .Select(s => s.MovieId).Distinct().ToListAsync(ct))
             .Concat(await _db.Ratings.Where(r => r.UserId == userId && r.MovieId != null)
                 .Select(r => r.MovieId!.Value).Distinct().ToListAsync(ct))
+            .Concat(await _db.UserWatches.Where(w => w.UserId == userId && w.MovieId != null)
+                .Select(w => w.MovieId!.Value).Distinct().ToListAsync(ct))
             .ToHashSet();
 
         var lovedGenreIds = await _db.Ratings
