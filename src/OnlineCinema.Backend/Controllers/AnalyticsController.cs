@@ -40,4 +40,14 @@ public class AnalyticsController : ControllerBase
     [HttpGet("genres")]
     public async Task<IActionResult> Genres() =>
         Ok(await _stats.GetGenreStatsAsync(HttpContext.RequestAborted));
+
+    [HttpGet("dashboard")]
+    public async Task<IActionResult> Dashboard(
+        [FromQuery] int days = 7,
+        [FromQuery] string? type = null,
+        [FromQuery] int? genreId = null) =>
+        Ok(await _analytics.GetDashboardAsync(
+            type, genreId,
+            TimeSpan.FromDays(days),
+            HttpContext.RequestAborted));
 }

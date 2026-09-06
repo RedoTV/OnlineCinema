@@ -229,4 +229,214 @@ public class AnalyticsRepository : IAnalyticsRepository
 
         return result;
     }
+
+    // ---- Динамический дашборд (страница аналитики) -----------------------------
+
+    private sealed class Acc
+    {
+        public int Watches;
+        public int RangeWatches;
+        public double WatchSeconds;
+        public double RangeWatchSeconds;
+        public HashSet<int> Users = new();
+        public HashSet<int> RangeUsers = new();
+    }
+
+    private sealed class RatingAcc
+    {
+        public int Count;
+        public double Sum;
+    }
+
+    public async Task<DashboardFeed> GetDashboardAsync(
+        string? contentType,
+        int? genreId,
+        TimeSpan window,
+        CancellationToken ct = default)
+    {
+        // days<=0 (окно «всё время») => окно неограничено, range-поля = общим.
+        var since = window > TimeSpan.Zero ? DateTime.UtcNow - window : DateTime.MinValue;
+
+        // ------------ Контент каталога -------------
+        var domainMovies = await _db.Movies
+            .OrderBy(m => m.Id)
+            .Select(m => new { m.Id, m.Title, m.ReleaseYear, m.PosterUrl, m.PosterLocalPath })
+            .ToListAsync(ct);
+        var domainSeries = await _db.Series
+            .OrderBy(s => s.Id)
+            .Select(s => new { s.Id, s.Title, s.ReleaseYear, s.PosterUrl, s.PosterLocalPath })
+            .ToListAsync(ct);
+
+        // Принадлежность контента жанрам (многие-ко-многим).
+        var movieGenreLinks = await _db.Genres
+            .SelectMany(g => g.Movies.Select(m => new { ContentId = m.Id, GenreId = g.Id, GenreName = g.Name }))
+            .ToListAsync(ct);
+        var seriesGenreLinks = await _db.Genres
+            .SelectMany(g => g.Series.Select(s => new { ContentId = s.Id, GenreId = g.Id, GenreName = g.Name }))
+            .ToListAsync(ct);
+
+        // ------------ Оценки ------------
+        var allRatings = await _db.Ratings
+            .Select(r => new { r.MovieId, r.SeriesId, r.RatingValue, r.CreatedAt })
+            .ToListAsync(ct);
+        var ratingByMovie = new Dictionary<int, RatingAcc>();
+        var ratingBySeries = new Dictionary<int, RatingAcc>();
+        var rangeRatings = 0;
+        foreach (var r in allRatings)
+        {
+            if (r.CreatedAt >= since) rangeRatings++;
+            if (r.MovieId.HasValue)
+            {
+                if (!ratingByMovie.TryGetValue(r.MovieId.Value, out var ra)) { ra = new RatingAcc(); ratingByMovie[r.MovieId.Value] = ra; }
+                ra.Count++; ra.Sum += r.RatingValue;
+            }
+            else if (r.SeriesId.HasValue)
+            {
+                if (!ratingBySeries.TryGetValue(r.SeriesId.Value, out var ra)) { ra = new RatingAcc(); ratingBySeries[r.SeriesId.Value] = ra; }
+                ra.Count++; ra.Sum += r.RatingValue;
+            }
+        }
+
+        // ------------ Просмотры (факт-таблица) ------------
+        // Маппинг эпизода -> сериал (нужен для серийных просмотров).
+        var episodeSeriesId = await _db.Episodes
+            .Select(e => new { e.Id, SeriesId = e.Season.SeriesId })
+            .ToListAsync(ct);
+        var epSeriesMap = episodeSeriesId.ToDictionary(e => e.Id, e => e.SeriesId);
+
+        var allWatches = await _db.UserWatches
+            .Select(w => new { w.Id, w.UserId, w.MovieId, w.EpisodeId, w.WatchedSeconds, w.WatchedAt })
+            .ToListAsync(ct);
+
+        var movieAcc = new Dictionary<int, Acc>();
+        var seriesAcc = new Dictionary<int, Acc>();
+        var allViewers = new HashSet<int>();
+        var rangeViewers = new HashSet<int>();
+        double totalSeconds = 0, rangeSeconds = 0;
+
+        foreach (var w in allWatches)
+        {
+            int key;
+            bool isMovie = w.MovieId.HasValue;
+            bool isEpisodeSeries = !isMovie && w.EpisodeId.HasValue;
+            int? seriesKey = isEpisodeSeries && epSeriesMap.TryGetValue(w.EpisodeId!.Value, out var sid) ? sid : null;
+            if (!isMovie && !seriesKey.HasValue) continue; // «пустой» эвент
+
+            var inRange = w.WatchedAt >= since;
+            allViewers.Add(w.UserId);
+            if (inRange) rangeViewers.Add(w.UserId);
+
+            if (isMovie)
+            {
+                key = w.MovieId!.Value;
+                if (!movieAcc.TryGetValue(key, out var a)) { a = new Acc(); movieAcc[key] = a; }
+                a.Watches++; a.WatchSeconds += w.WatchedSeconds;
+                a.Users.Add(w.UserId);
+                if (inRange) { a.RangeWatches++; a.RangeWatchSeconds += w.WatchedSeconds; a.RangeUsers.Add(w.UserId); }
+                totalSeconds += w.WatchedSeconds;
+                if (inRange) rangeSeconds += w.WatchedSeconds;
+            }
+            else
+            {
+                key = seriesKey!.Value;
+                if (!seriesAcc.TryGetValue(key, out var a)) { a = new Acc(); seriesAcc[key] = a; }
+                a.Watches++; a.WatchSeconds += w.WatchedSeconds;
+                a.Users.Add(w.UserId);
+                if (inRange) { a.RangeWatches++; a.RangeWatchSeconds += w.WatchedSeconds; a.RangeUsers.Add(w.UserId); }
+                totalSeconds += w.WatchedSeconds;
+                if (inRange) rangeSeconds += w.WatchedSeconds;
+            }
+        }
+
+        var watchEvents = allWatches.Where(w => w.MovieId.HasValue ||
+            (w.EpisodeId.HasValue && epSeriesMap.ContainsKey(w.EpisodeId.Value))).Count();
+        var rangeWatchEvents = allWatches.Count(w => (w.MovieId.HasValue ||
+            (w.EpisodeId.HasValue && epSeriesMap.ContainsKey(w.EpisodeId.Value))) && w.WatchedAt >= since);
+
+        // ------------ Build content rows (с фильтрами) ------------
+        bool wantMovies = contentType == null || contentType == "movie" || contentType == "all";
+        bool wantSeries = contentType == null || contentType == "series" || contentType == "all";
+
+        var content = new List<ContentRow>();
+
+        if (wantMovies)
+        {
+            foreach (var m in domainMovies)
+            {
+                if (genreId.HasValue && !movieGenreLinks.Any(l => l.ContentId == m.Id && l.GenreId == genreId.Value)) continue;
+                var gNames = movieGenreLinks.Where(l => l.ContentId == m.Id).Select(l => l.GenreName).OrderBy(n => n).ToArray();
+                var ra = ratingByMovie.TryGetValue(m.Id, out var r) ? r : null;
+                var wa = movieAcc.TryGetValue(m.Id, out var a) ? a : null;
+                content.Add(new ContentRow(
+                    m.Id, "movie", m.Title, m.ReleaseYear, gNames,
+                    ra?.Count ?? 0, ra != null ? ra.Sum / ra.Count : null,
+                    wa?.Watches ?? 0, wa?.WatchSeconds ?? 0,
+                    wa?.RangeWatches ?? 0, wa?.RangeWatchSeconds ?? 0));
+            }
+        }
+
+        if (wantSeries)
+        {
+            foreach (var s in domainSeries)
+            {
+                if (genreId.HasValue && !seriesGenreLinks.Any(l => l.ContentId == s.Id && l.GenreId == genreId.Value)) continue;
+                var gNames = seriesGenreLinks.Where(l => l.ContentId == s.Id).Select(l => l.GenreName).OrderBy(n => n).ToArray();
+                var ra = ratingBySeries.TryGetValue(s.Id, out var r) ? r : null;
+                var wa = seriesAcc.TryGetValue(s.Id, out var a) ? a : null;
+                content.Add(new ContentRow(
+                    s.Id, "series", s.Title, s.ReleaseYear, gNames,
+                    ra?.Count ?? 0, ra != null ? ra.Sum / ra.Count : null,
+                    wa?.Watches ?? 0, wa?.WatchSeconds ?? 0,
+                    wa?.RangeWatches ?? 0, wa?.RangeWatchSeconds ?? 0));
+            }
+        }
+
+        // ------------ Genres (всегда весь каталог) ------------
+        var genreNames = (await _db.Genres.OrderBy(g => g.Name).Select(g => new { g.Id, g.Name }).ToListAsync(ct))
+            .ToDictionary(g => g.Id, g => g.Name);
+
+        var genreList = new List<GenreRowItem>();
+        foreach (var gId in genreNames.Keys)
+        {
+            int movieCount = movieGenreLinks.Count(l => l.GenreId == gId);
+            int seriesCount = seriesGenreLinks.Count(l => l.GenreId == gId);
+            int watches = 0;
+            foreach (var mg in movieGenreLinks.Where(l => l.GenreId == gId))
+                if (movieAcc.TryGetValue(mg.ContentId, out var a)) watches += a.Watches;
+            foreach (var sg in seriesGenreLinks.Where(l => l.GenreId == gId))
+                if (seriesAcc.TryGetValue(sg.ContentId, out var a)) watches += a.Watches;
+            genreList.Add(new GenreRowItem(gId, genreNames[gId], movieCount, seriesCount, watches));
+        }
+
+        // ------------ Timeline (по дням, в окне) ------------
+        var byDay = new Dictionary<DateOnly, int>();
+        foreach (var w in allWatches)
+        {
+            bool valid = w.MovieId.HasValue ||
+                (w.EpisodeId.HasValue && epSeriesMap.ContainsKey(w.EpisodeId.Value));
+            if (!valid || w.WatchedAt < since) continue;
+            var day = DateOnly.FromDateTime(w.WatchedAt);
+            if (!byDay.ContainsKey(day)) byDay[day] = 0;
+            byDay[day]++;
+        }
+        var timeline = new List<TimelineItem>();
+        if (byDay.Count > 0)
+        {
+            var minDay = byDay.Keys.Min();
+            var maxDay = byDay.Keys.Max();
+            for (var d = minDay; d <= maxDay; d = d.AddDays(1))
+                timeline.Add(new TimelineItem(d.ToString("yyyy-MM-dd"), byDay.TryGetValue(d, out var c) ? c : 0));
+        }
+
+        var overview = new DashboardOverviewRow(
+            domainMovies.Count, domainSeries.Count,
+            allViewers.Count, watchEvents, totalSeconds,
+            rangeViewers.Count, rangeWatchEvents, rangeSeconds,
+            rangeRatings,
+            allRatings.Count);
+
+        return new DashboardFeed(overview, content.ToArray(),
+            genreList.OrderByDescending(g => g.WatchEvents).Take(40).ToArray(),
+            timeline.OrderBy(t => t.Label).Take(120).ToArray());
+    }
 }

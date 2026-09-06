@@ -19,4 +19,7 @@ public class AnalyticsService : IAnalyticsService
 
     public Task<List<PickRow>> GetPicksAsync(int userId, int count, CancellationToken ct = default)
         => _analytics.GetPicksAsync(userId, count, ct);
+
+    public Task<DashboardFeed> GetDashboardAsync(string? contentType, int? genreId, TimeSpan window, CancellationToken ct = default)
+        => _analytics.GetDashboardAsync(contentType, genreId, window, ct);
 }
