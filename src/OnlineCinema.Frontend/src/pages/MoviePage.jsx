@@ -88,11 +88,6 @@ export const MoviePage = () => {
 
   return (
     <div className="max-w-[1400px] mx-auto">
-      {/* ПЛЕЕР */}
-      <div className="mb-8 border-2 border-black p-1 bg-black">
-        <VideoPlayer streamUrl={streamUrl} movieId={Number(id)} initialPosition={initialPosition} />
-      </div>
-
       {/* ШАПКА: постер слева, инфо справа */}
       <header className="grid md:grid-cols-[260px_1fr] gap-10 mb-12">
         <div className="aspect-[2/3] border-2 border-black overflow-hidden bg-neutral-900 shadow-[8px_8px_0_#000]">
@@ -140,6 +135,14 @@ export const MoviePage = () => {
           <p className="text-lg leading-relaxed text-justify font-medium whitespace-pre-line text-gray-800">{movie.description}</p>
         </section>
       )}
+
+      {/* Плеер */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-black uppercase mb-4 border-b-2 border-black pb-2">СМОТРЕТЬ</h2>
+        <div className="border-2 border-black p-1 bg-black">
+          <VideoPlayer streamUrl={streamUrl} movieId={Number(id)} initialPosition={initialPosition} />
+        </div>
+      </section>
 
       {/* Оценка пользователя */}
       {user && (
