@@ -34,6 +34,9 @@ public class ActorService : IActorService
         return actor == null ? null : _mapper.Map<ActorDto>(actor);
     }
 
+    public Task<List<ActorCreditDto>> GetCreditsAsync(int id) =>
+        _actors.GetCreditsAsync(id);
+
     public async Task<ActorDto> CreateAsync(CreateActorDto dto)
     {
         var actor = _mapper.Map<Actor>(dto);

@@ -30,6 +30,14 @@ public class ActorsController : ControllerBase
         return Ok(actor);
     }
 
+    // Фильмография актёра (фильмы + сериалы) для страницы актёра.
+    [HttpGet("{id}/credits")]
+    public async Task<ActionResult<IEnumerable<ActorCreditDto>>> GetCredits(int id)
+    {
+        var credits = await _actorService.GetCreditsAsync(id);
+        return Ok(credits);
+    }
+
     [HttpPost, Authorize(Roles = "Admin")]
     public async Task<ActionResult<ActorDto>> CreateActor(CreateActorDto dto)
     {
