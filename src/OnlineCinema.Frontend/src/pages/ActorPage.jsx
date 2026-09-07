@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api/axios';
-import { PosterImage } from '../components/PosterImage';
 
 // Портрет актёра (или инлайн-фолбэк, если фото не загружено).
 const ActorPhoto = ({ actorId, name }) => {
@@ -25,27 +24,19 @@ const ActorPhoto = ({ actorId, name }) => {
 
 export const ActorPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [actor, setActor] = useState(null);
-  const [credits, setCredits] = useState([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let alive = true;
     const controller = new AbortController();
 
-    Promise.all([
-      api.get(`/Actors/${id}`, { signal: controller.signal }),
-      api.get(`/Actors`, { signal: controller.signal }),
-    ])
-      .then(([actorRes, allRes]) => {
-        if (!alive) return;
-        setActor(actorRes.data);
-        // Находим работы актёра по всем актёрам; в идеале бэкенд отдаёт кредиты напрямую.
-        setCredits(allRes.data || []);
-      })
+    api.get(`/Actors/${id}`, { signal: controller.signal })
+      .then(res => { if (alive) setActor(res.data); })
       .catch((err) => {
         if (err?.code === 'ERR_CANCELED') return;
-        setError('Не удалось загрузить актёра');
+        if (alive) setError('Не удалось загрузить актёра');
       });
 
     return () => {
@@ -97,21 +88,17 @@ export const ActorPage = () => {
       {/* Фильмография */}
       <section className="mb-12">
         <h2 className="text-2xl font-black uppercase mb-6 border-b-2 border-black pb-2">ФИЛЬМОГРАФИЯ</h2>
-        <p className="text-sm italic text-gray-500 mb-4">
-          Список работ обновляется по мере наполнения каталога.
-        </p>
-        {/* Здесь должен быть список фильмов/сериалов актёра. Бэкенд пока не отдаёт кредиты,
-            поэтому показываем пустую заглушку, если данных нет. */}
-        {credits.length === 0 && (
-          <div className="border-2 border-dashed border-neutral-300 p-8 text-center font-medium text-neutral-500">
-            Фильмография появится, когда у этого актёра будут работы в каталоге.
-          </div>
-        )}
+        <div className="border-2 border-dashed border-neutral-300 p-8 text-center font-medium text-neutral-500">
+          Фильмография появится, когда у этого актёра будут работы в каталоге.
+        </div>
       </section>
 
-      <Link to="/actors" className="inline-block border-2 border-black px-4 py-2 font-bold uppercase hover:bg-black hover:text-white transition-colors">
-        ← Все актёры
-      </Link>
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-block border-2 border-black px-4 py-2 font-bold uppercase hover:bg-black hover:text-white transition-colors"
+      >
+        ← Назад
+      </button>
     </div>
   );
 };

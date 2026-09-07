@@ -23,6 +23,26 @@ const SeriesListSkeleton = () => (
   </div>
 );
 
+const ActorThumb = ({ actor }) => {
+  const [failed, setFailed] = useState(false);
+  const name = `${actor.firstName} ${actor.lastName}`;
+  if (failed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-neutral-200 text-center p-2">
+        <span className="text-[10px] font-bold uppercase leading-tight">{name}</span>
+      </div>
+    );
+  }
+  return (
+    <img
+      src={`/api/Media/poster/actor/${actor.id}`}
+      alt={name}
+      className="h-full w-full object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
+};
+
 // Страница сериалов: список (без id) или детальная (с id) со сезонами/эпизодами
 export const SeriesPage = () => {
   const { id } = useParams();
@@ -33,15 +53,17 @@ export const SeriesPage = () => {
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState('');
   const [listRetry, setListRetry] = useState(0);
-  // Поиск бьёт в API только после паузы ввода, а не на каждую клавишу.
   const debouncedSearch = useDebouncedValue(search, 350);
+
   const [streamUrl, setStreamUrl] = useState(null);
   const [activeEpisode, setActiveEpisode] = useState(null);
   const [initialPosition, setInitialPosition] = useState(0);
   const [myRating, setMyRating] = useState(8);
 
-  // Сброс listLoading/listError живёт в обработчиках, а не в эффекте:
-  // синхронный setState в теле эффекта запрещён (каскадные рендеры).
+  // Выбор сезона и серии поверх плеера.
+  const [selectedSeasonId, setSelectedSeasonId] = useState(null);
+  const [selectedEpisodeId, setSelectedEpisodeId] = useState(null);
+
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
     setListError('');
@@ -81,7 +103,6 @@ export const SeriesPage = () => {
         if (!controller.signal.aborted) setListLoading(false);
       });
 
-    // Устаревший ответ поиска не затирает свежий.
     return () => controller.abort();
   }, [debouncedSearch, listRetry, id]);
 
@@ -89,7 +110,15 @@ export const SeriesPage = () => {
   useEffect(() => {
     if (!id) return;
     api.get(`/Series/${id}`)
-      .then(res => setSeries(res.data))
+      .then(res => {
+        setSeries(res.data);
+        // По умолчанию выбираем первый сезон и первый эпизод.
+        const firstSeason = res.data.seasons?.[0];
+        if (firstSeason) {
+          setSelectedSeasonId(firstSeason.id);
+          setSelectedEpisodeId(firstSeason.episodes?.[0]?.id ?? null);
+        }
+      })
       .catch(() => {});
   }, [id]);
 
@@ -176,24 +205,34 @@ export const SeriesPage = () => {
   // ---- ДЕТАЛЬНАЯ ----
   if (!series) return <div className="text-xl font-bold text-center mt-10 uppercase">Загрузка...</div>;
 
+  const selectedSeason = series.seasons?.find(s => s.id === selectedSeasonId) || series.seasons?.[0];
+  const episodes = selectedSeason?.episodes || [];
+  // Если выбранного эпизода нет в текущем сезоне — берём первый.
+  const currentEpisodeId = episodes.some(e => e.id === selectedEpisodeId)
+    ? selectedEpisodeId
+    : (episodes[0]?.id ?? null);
+
+  const onSeasonChange = (seasonId) => {
+    const s = series.seasons?.find(x => x.id === Number(seasonId));
+    setSelectedSeasonId(Number(seasonId));
+    setSelectedEpisodeId(s?.episodes?.[0]?.id ?? null);
+  };
+
+  const onEpisodesPrevNext = (dir) => {
+    if (!episodes.length) return;
+    const flat = [];
+    (series.seasons || []).forEach(s => (s.episodes || []).forEach(ep => flat.push(ep)));
+    const idx = flat.findIndex(e => e.id === currentEpisodeId);
+    const next = flat[idx + dir];
+    if (next) {
+      setSelectedSeasonId((series.seasons || []).find(s => s.episodes?.some(e => e.id === next.id))?.id ?? selectedSeasonId);
+      setSelectedEpisodeId(next.id);
+    }
+  };
+
   return (
     <div>
-      <h1 className="text-4xl font-black uppercase mb-6 border-l-8 border-black pl-4">{series.title}</h1>
-
-      {activeEpisode && (
-        <div className="mb-6 border-2 border-black p-1 bg-black">
-          <VideoPlayer
-            key={activeEpisode.id}
-            streamUrl={streamUrl}
-            episodeId={activeEpisode.id}
-            initialPosition={initialPosition}
-            onEnded={autoNext}
-          />
-          <div className="text-white p-2 font-bold">С{activeEpisode.seasonNumber}E{activeEpisode.episodeNumber} — {activeEpisode.title}</div>
-        </div>
-      )}
-
-      {/* Шапка: постер + средняя оценка + актёры */}
+      {/* Шапка: постер + описание + оценка + актёры */}
       <div className="grid md:grid-cols-[220px_1fr] gap-8 mb-8">
         <div className="aspect-[2/3] border-2 border-black overflow-hidden bg-neutral-900 shadow-[8px_8px_0_#000]">
           <PosterImage
@@ -203,21 +242,25 @@ export const SeriesPage = () => {
           />
         </div>
         <div>
-          <p className="text-lg leading-relaxed mb-4">{series.description}</p>
+          <h1 className="text-4xl md:text-5xl font-black uppercase leading-none tracking-[-0.03em] mb-3">{series.title}</h1>
 
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm uppercase tracking-widest text-neutral-500 mb-6">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm uppercase tracking-widest text-neutral-500 mb-5">
             {series.releaseYear && <span>{series.releaseYear}</span>}
             {series.seasonsCount > 0 && <span>{series.seasonsCount} сез.</span>}
             {series.genres?.length > 0 && <span>{series.genres.map(g => g.name).join(' · ')}</span>}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-5">
             <span className="text-3xl font-black text-amber-400">★</span>
             <span className="text-3xl font-black">{series.averageRating > 0 ? Number(series.averageRating).toFixed(1) : '—'}</span>
           </div>
 
+          {series.description && (
+            <p className="text-lg leading-relaxed mb-5">{series.description}</p>
+          )}
+
           {user && (
-            <div className="flex items-center gap-3 mt-4">
+            <div className="flex items-center gap-3">
               <span className="font-bold">Ваша оценка:</span>
               <select
                 value={myRating}
@@ -242,7 +285,7 @@ export const SeriesPage = () => {
             {series.actors.map((actor) => (
               <Link key={actor.id} to={`/actor/${actor.id}`} className="group block">
                 <div className="aspect-[2/3] border-2 border-black overflow-hidden bg-neutral-900 mb-2 group-hover:shadow-[4px_4px_0_#000] transition-shadow">
-                  <SeriesActorThumb actor={actor} />
+                  <ActorThumb actor={actor} />
                 </div>
                 <div className="text-center font-bold text-sm leading-tight uppercase group-hover:underline">
                   {actor.firstName} {actor.lastName}
@@ -253,52 +296,85 @@ export const SeriesPage = () => {
         </section>
       )}
 
-      {/* Сезоны и эпизоды */}
-      <div className="space-y-6">
-        {series.seasons?.map(season => (
-          <div key={season.id} className="border-2 border-black">
-            <div className="bg-black text-white px-4 py-2 font-bold uppercase">
-              Сезон {season.seasonNumber}{season.title ? ` — ${season.title}` : ''}
+      {/* ПЛЕЕР + выбор сезона/серии поверх него */}
+      <section className="mb-10">
+        <h2 className="text-2xl font-black uppercase mb-4 border-b-2 border-black pb-2">СМОТРЕТЬ</h2>
+
+        <div className="relative border-2 border-black bg-black">
+          {activeEpisode && streamUrl ? (
+            <VideoPlayer
+              key={activeEpisode.id}
+              streamUrl={streamUrl}
+              episodeId={activeEpisode.id}
+              initialPosition={initialPosition}
+              onEnded={autoNext}
+            />
+          ) : (
+            <div className="aspect-video flex items-center justify-center text-white font-bold uppercase text-lg">
+              Выберите серию для просмотра
             </div>
-            <div className="divide-y divide-black">
-              {season.episodes?.map(ep => (
+          )}
+
+          {/* Оверлей выбора сезона/серии — поверх плеера, снизу */}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-3 pt-8">
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={selectedSeason?.id || ''}
+                onChange={(e) => onSeasonChange(e.target.value)}
+                className="border-2 border-white bg-black text-white px-2 py-1 font-bold text-sm uppercase"
+              >
+                {series.seasons?.map(s => (
+                  <option key={s.id} value={s.id}>
+                    Сезон {s.seasonNumber}{s.title ? ` — ${s.title}` : ''}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={currentEpisodeId || ''}
+                onChange={(e) => {
+                  const epId = Number(e.target.value);
+                  setSelectedEpisodeId(epId);
+                  const ep = episodes.find(x => x.id === epId);
+                  if (ep) playEpisode({ ...ep, seasonNumber: selectedSeason?.seasonNumber });
+                }}
+                className="border-2 border-white bg-black text-white px-2 py-1 font-bold text-sm flex-1 min-w-[140px]"
+              >
+                {episodes.map(ep => (
+                  <option key={ep.id} value={ep.id}>
+                    Э{ep.episodeNumber} · {ep.title}
+                  </option>
+                ))}
+              </select>
+
+              {activeEpisode?.title && (
+                <span className="hidden sm:inline text-white/80 text-xs font-semibold">
+                  С{activeEpisode.seasonNumber}E{activeEpisode.episodeNumber}
+                </span>
+              )}
+
+              <div className="ml-auto flex gap-1">
                 <button
-                  key={ep.id}
-                  onClick={() => playEpisode({ ...ep, seasonNumber: season.seasonNumber })}
-                  className="w-full flex justify-between items-center px-4 py-2 hover:bg-gray-100 text-left"
+                  onClick={() => onEpisodesPrevNext(-1)}
+                  className="border-2 border-white bg-black text-white px-3 py-1 font-bold hover:bg-white hover:text-black transition-colors"
+                  title="Предыдущая серия"
                 >
-                  <span className="font-medium">
-                    <span className="font-bold mr-2">Э{ep.episodeNumber}</span> {ep.title}
-                  </span>
-                  <span className="text-sm text-gray-500">{ep.duration ? `${ep.duration} мин` : ''}</span>
+                  ←
                 </button>
-              ))}
+                <button
+                  onClick={() => onEpisodesPrevNext(1)}
+                  className="border-2 border-white bg-black text-white px-3 py-1 font-bold hover:bg-white hover:text-black transition-colors"
+                  title="Следующая серия"
+                >
+                  →
+                </button>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      </section>
 
       <CommentSection seriesId={Number(id)} />
     </div>
-  );
-};
-
-const SeriesActorThumb = ({ actor }) => {
-  const [failed, setFailed] = useState(false);
-  const name = `${actor.firstName} ${actor.lastName}`;
-  if (failed) {
-    return (
-      <div className="flex h-full w-full items-center justify-center bg-neutral-200 text-center p-2">
-        <span className="text-[10px] font-bold uppercase leading-tight">{name}</span>
-      </div>
-    );
-  }
-  return (
-    <img
-      src={`/api/Media/poster/actor/${actor.id}`}
-      alt={name}
-      className="h-full w-full object-cover"
-      onError={() => setFailed(true)}
-    />
   );
 };
