@@ -203,7 +203,23 @@ function resolveGenreIds(names) {
   return (names || []).map((g) => (genres.get(key(g)) || {}).id).filter(Boolean);
 }
 function resolveActorIds(names) {
-  return (names || []).map((n) => (actorsCompact.get(compact(n)) || {}).id).filter(Boolean);
+  const ids = [];
+  const used = new Set();
+  for (const n of (names || [])) {
+    const hit = actorsCompact.get(compact(n));
+    if (hit && !used.has(hit.id)) { ids.push(hit.id); used.add(hit.id); }
+  }
+  // Если каст пуст — прикрепляем пару актёров детерминировано, чтобы
+  // в фильмах/сериалах всегда был состав (не обязательно достоверный по факту).
+  if (ids.length === 0) {
+    const pool = [...actorsCompact.values()];
+    const seed = (names?.join('') || '').length;
+    for (let s = 0; s < 2 && pool.length; s++) {
+      const pick = pool[(seed + s * 7) % pool.length];
+      if (!used.has(pick.id)) { ids.push(pick.id); used.add(pick.id); }
+    }
+  }
+  return ids;
 }
 
 async function ensureSeriesSeason(seriesId, d) {
