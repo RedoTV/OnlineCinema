@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/axios';
+import { PosterImage } from '../components/PosterImage';
 
 // Портрет актёра (или инлайн-фолбэк, если фото не загружено).
 const ActorPhoto = ({ actorId, name }) => {
@@ -26,17 +27,29 @@ export const ActorPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [actor, setActor] = useState(null);
+  const [credits, setCredits] = useState([]);
+  const [creditsLoading, setCreditsLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let alive = true;
     const controller = new AbortController();
 
-    api.get(`/Actors/${id}`, { signal: controller.signal })
-      .then(res => { if (alive) setActor(res.data); })
+    Promise.all([
+      api.get(`/Actors/${id}`, { signal: controller.signal }),
+      api.get(`/Actors/${id}/credits`, { signal: controller.signal }),
+    ])
+      .then(([actorRes, creditsRes]) => {
+        if (!alive) return;
+        setActor(actorRes.data);
+        setCredits(creditsRes.data || []);
+      })
       .catch((err) => {
         if (err?.code === 'ERR_CANCELED') return;
         if (alive) setError('Не удалось загрузить актёра');
+      })
+      .finally(() => {
+        if (alive) setCreditsLoading(false);
       });
 
     return () => {
@@ -88,9 +101,39 @@ export const ActorPage = () => {
       {/* Фильмография */}
       <section className="mb-12">
         <h2 className="text-2xl font-black uppercase mb-6 border-b-2 border-black pb-2">ФИЛЬМОГРАФИЯ</h2>
-        <div className="border-2 border-dashed border-neutral-300 p-8 text-center font-medium text-neutral-500">
-          Фильмография появится, когда у этого актёра будут работы в каталоге.
-        </div>
+
+        {creditsLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="aspect-[2/3] border-2 border-black animate-pulse bg-neutral-200" />
+            ))}
+          </div>
+        ) : credits.length === 0 ? (
+          <div className="border-2 border-dashed border-neutral-300 p-8 text-center font-medium text-neutral-500">
+            Пока нет работ в каталоге.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {credits.map((credit) => (
+              <Link key={`${credit.type}-${credit.id}`} to={credit.type === 'movie' ? `/movie/${credit.id}` : `/series/${credit.id}`} className="group block">
+                <div className="aspect-[2/3] border-2 border-black overflow-hidden bg-neutral-900 mb-2 group-hover:shadow-[4px_4px_0_#000] transition-shadow">
+                  <PosterImage
+                    src={credit.posterUrl ? `/api/Media/poster/${credit.type === 'series' ? 'series/' : ''}${credit.id}?size=preview` : null}
+                    alt={credit.title}
+                  />
+                </div>
+                <div className="text-center">
+                  <div className="font-bold text-sm leading-tight uppercase group-hover:underline">{credit.title}</div>
+                  <div className="text-xs text-gray-500 flex justify-center gap-2">
+                    {credit.releaseYear && <span>{credit.releaseYear}</span>}
+                    {credit.averageRating > 0 && <span>★ {Number(credit.averageRating).toFixed(1)}</span>}
+                    <span className="uppercase font-semibold">{credit.type === 'movie' ? 'Фильм' : 'Сериал'}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       <button
