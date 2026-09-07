@@ -1,9 +1,6 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState } from 'react';
 import { api } from '../api/axios';
 import { Link } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
-import { RecommendationRow } from '../components/RecommendationRow';
-import { ActivityFeed } from '../components/ActivityFeed';
 import { PosterImage } from '../components/PosterImage';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
@@ -23,22 +20,44 @@ const CatalogSkeleton = () => (
   </div>
 );
 
+const MiniRow = ({ title, items, to }) => (
+  <section className="mb-10">
+    <div className="flex items-end justify-between mb-3">
+      <h2 className="text-2xl font-black uppercase border-l-8 border-black pl-4 leading-none">{title}</h2>
+      <Link to={to} className="text-sm font-bold uppercase hover:underline decoration-2 underline-offset-4">Все →</Link>
+    </div>
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      {items.map((item, i) => (
+        <Link key={item.id} to={`${to}/${item.id}`} className="group block border-2 border-black hover:bg-black hover:text-white transition-colors">
+          <div className="relative aspect-[2/3] w-full overflow-hidden border-b-2 border-black group-hover:border-white">
+            <PosterImage
+              src={item.posterUrl ? `/api/Media/poster/${item.kind === 'series' ? 'series/' : ''}${item.id}?size=preview` : null}
+              alt={item.title}
+              eager={i < 4}
+            />
+          </div>
+          <div className="p-3">
+            <h3 className="font-black text-sm leading-tight mb-1 uppercase">{item.title}</h3>
+            <div className="flex justify-between text-xs font-medium">
+              <span>{item.releaseYear}</span>
+              {item.averageRating > 0 && <span>★ {Number(item.averageRating).toFixed(1)}</span>}
+            </div>
+          </div>
+        </Link>
+      ))}
+    </div>
+  </section>
+);
+
 export const HomePage = () => {
-  const { user } = useContext(AuthContext);
   const [movies, setMovies] = useState([]);
+  const [series, setSeries] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
-  // Поиск бьёт в API только после паузы ввода, а не на каждую клавишу.
   const debouncedSearch = useDebouncedValue(search, 350);
 
-  // sub в JWT = userId. Идёт в analytics для рекомендаций
-  const userId = user ? Number(user.sub) : null;
-  const username = user?.username;
-
-  // Сброс loading/error живёт в обработчиках, а не в эффекте:
-  // синхронный setState в теле эффекта запрещён (каскадные рендеры).
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
     setError('');
@@ -51,9 +70,9 @@ export const HomePage = () => {
     setRetry((n) => n + 1);
   };
 
+  // Фильмы (с учётом поиска) + сериалы (топ для мини-раздела) — одним заходом.
   useEffect(() => {
     const controller = new AbortController();
-
     const params = new URLSearchParams();
     if (debouncedSearch) params.append('search', debouncedSearch);
 
@@ -68,14 +87,22 @@ export const HomePage = () => {
         if (!controller.signal.aborted) setLoading(false);
       });
 
-    // Устаревший ответ поиска не затирает свежий.
     return () => controller.abort();
   }, [debouncedSearch, retry]);
+
+  useEffect(() => {
+    api.get('/Series')
+      .then((response) => setSeries(response.data))
+      .catch(() => {});
+  }, []);
+
+  const topMovies = movies.slice(0, 6);
+  const topSeries = series.slice(0, 6);
 
   return (
     <div>
       {/* Поиск */}
-      <div className="mb-8">
+      <div className="mb-10">
         <input
           type="text"
           placeholder="Поиск фильма по названию..."
@@ -85,11 +112,32 @@ export const HomePage = () => {
         />
       </div>
 
-      {/* Персонализация + live-активность из analytics */}
-      <RecommendationRow userId={userId} username={username} />
-      <ActivityFeed userId={userId} />
+      {/* Мини-раздел фильмов */}
+      {!search && topMovies.length > 0 && (
+        <MiniRow title="Фильмы" items={topMovies.map(m => ({ ...m, kind: 'movie' }))} to="/" />
+      )}
 
-      {/* Каталог */}
+      {/* Мини-раздел сериалов */}
+      {!search && topSeries.length > 0 && (
+        <MiniRow title="Сериалы" items={topSeries.map(s => ({ ...s, kind: 'series' }))} to="/series" />
+      )}
+
+      {/* Новости и статьи */}
+      {!search && (
+        <section className="mb-10 border-2 border-black p-5 bg-neutral-50">
+          <div className="flex items-end justify-between mb-4">
+            <h2 className="text-2xl font-black uppercase border-l-8 border-black pl-4 leading-none">Новости и статьи</h2>
+            <Link to="/news" className="text-sm font-bold uppercase hover:underline decoration-2 underline-offset-4">Все →</Link>
+          </div>
+          <p className="text-sm text-gray-600 italic">
+            Обзоры, анонсы и мнения о кино. Читайте свежие материалы, а также делитесь своими — они проходят проверку модератором.
+          </p>
+        </section>
+      )}
+
+      {/* Полный каталог фильмов */}
+      <h2 className="text-2xl font-black uppercase mb-3 border-l-8 border-black pl-4 leading-none">Каталог</h2>
+
       {error && (
         <div className="mb-6 border-2 border-red-600 p-4 text-center">
           <p className="font-bold text-red-600">{error}</p>
@@ -115,10 +163,10 @@ export const HomePage = () => {
                 />
               </div>
               <div className="p-3">
-                <h3 className="font-bold text-lg leading-tight mb-1 uppercase">{movie.title}</h3>
+                <h3 className="font-black text-lg leading-tight mb-1 uppercase">{movie.title}</h3>
                 <div className="flex justify-between text-sm font-medium">
                   <span>{movie.releaseYear}</span>
-                  <span>★ {movie.averageRating?.toFixed(1)}</span>
+                  {movie.averageRating > 0 && <span>★ {Number(movie.averageRating).toFixed(1)}</span>}
                 </div>
               </div>
             </Link>

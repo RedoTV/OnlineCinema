@@ -56,7 +56,7 @@ public class CommentsController : ControllerBase
         return Ok();
     }
 
-    [HttpPost("{id}/hide"), Authorize(Roles = "Admin")]
+    [HttpPost("{id}/hide"), Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> HideComment(int id, [FromQuery] bool hide = true)
     {
         try
@@ -70,7 +70,7 @@ public class CommentsController : ControllerBase
         }
     }
 
-    [HttpDelete("{id}"), Authorize(Roles = "Admin")]
+    [HttpDelete("{id}"), Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> DeleteComment(int id)
     {
         await _commentService.DeleteAsync(id);
