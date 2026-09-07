@@ -193,25 +193,67 @@ export const SeriesPage = () => {
         </div>
       )}
 
-      <p className="text-lg leading-relaxed mb-6">{series.description}</p>
-
-      {user && (
-        <div className="flex items-center gap-3 mb-6 border-2 border-black p-2 w-fit">
-          <span className="font-bold">Ваша оценка сериала:</span>
-          <select
-            value={myRating}
-            onChange={(e) => setMyRating(e.target.value)}
-            className="border-2 border-black px-2 py-0.5"
-          >
-            {[...Array(10)].map((_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
-          </select>
-          <button onClick={handleRate} className="border-2 border-black px-3 py-0.5 font-bold hover:bg-black hover:text-white">
-            Поставить
-          </button>
-          <span className="text-sm text-gray-600">★ {series.averageRating?.toFixed(1)}</span>
+      {/* Шапка: постер + средняя оценка + актёры */}
+      <div className="grid md:grid-cols-[220px_1fr] gap-8 mb-8">
+        <div className="aspect-[2/3] border-2 border-black overflow-hidden bg-neutral-900 shadow-[8px_8px_0_#000]">
+          <PosterImage
+            src={series.posterUrl ? `/api/Media/poster/series/${series.id}?size=preview` : null}
+            alt={series.title}
+            eager
+          />
         </div>
+        <div>
+          <p className="text-lg leading-relaxed mb-4">{series.description}</p>
+
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm uppercase tracking-widest text-neutral-500 mb-6">
+            {series.releaseYear && <span>{series.releaseYear}</span>}
+            {series.seasonsCount > 0 && <span>{series.seasonsCount} сез.</span>}
+            {series.genres?.length > 0 && <span>{series.genres.map(g => g.name).join(' · ')}</span>}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-3xl font-black text-amber-400">★</span>
+            <span className="text-3xl font-black">{series.averageRating > 0 ? Number(series.averageRating).toFixed(1) : '—'}</span>
+          </div>
+
+          {user && (
+            <div className="flex items-center gap-3 mt-4">
+              <span className="font-bold">Ваша оценка:</span>
+              <select
+                value={myRating}
+                onChange={(e) => setMyRating(e.target.value)}
+                className="border-2 border-black px-2 py-1 font-bold"
+              >
+                {[...Array(10)].map((_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
+              </select>
+              <button onClick={handleRate} className="border-2 border-black px-3 py-1 font-bold hover:bg-black hover:text-white">
+                Поставить
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Актёры */}
+      {series.actors?.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-2xl font-black uppercase mb-4 border-b-2 border-black pb-2">АКТЁРЫ</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {series.actors.map((actor) => (
+              <Link key={actor.id} to={`/actor/${actor.id}`} className="group block">
+                <div className="aspect-[2/3] border-2 border-black overflow-hidden bg-neutral-900 mb-2 group-hover:shadow-[4px_4px_0_#000] transition-shadow">
+                  <SeriesActorThumb actor={actor} />
+                </div>
+                <div className="text-center font-bold text-sm leading-tight uppercase group-hover:underline">
+                  {actor.firstName} {actor.lastName}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
+      {/* Сезоны и эпизоды */}
       <div className="space-y-6">
         {series.seasons?.map(season => (
           <div key={season.id} className="border-2 border-black">
@@ -238,5 +280,25 @@ export const SeriesPage = () => {
 
       <CommentSection seriesId={Number(id)} />
     </div>
+  );
+};
+
+const SeriesActorThumb = ({ actor }) => {
+  const [failed, setFailed] = useState(false);
+  const name = `${actor.firstName} ${actor.lastName}`;
+  if (failed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-neutral-200 text-center p-2">
+        <span className="text-[10px] font-bold uppercase leading-tight">{name}</span>
+      </div>
+    );
+  }
+  return (
+    <img
+      src={`/api/Media/poster/actor/${actor.id}`}
+      alt={name}
+      className="h-full w-full object-cover"
+      onError={() => setFailed(true)}
+    />
   );
 };

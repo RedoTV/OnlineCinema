@@ -4,6 +4,9 @@ import { Header } from './Header';
 import { HomePage } from './pages/HomePage';
 import { MoviePage } from './pages/MoviePage';
 import { SeriesPage } from './pages/SeriesPage';
+import { ActorsPage } from './pages/ActorsPage';
+import { ActorPage } from './pages/ActorPage';
+import { NewsPage } from './pages/NewsPage';
 import { StatsPage } from './pages/StatsPage';
 import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
 import { ProfilePage } from './pages/ProfilePage';
@@ -22,6 +25,9 @@ function App() {
             <Route path="/movie/:id" element={<MoviePage />} />
             <Route path="/series" element={<SeriesPage />} />
             <Route path="/series/:id" element={<SeriesPage />} />
+            <Route path="/actors" element={<ActorsPage />} />
+            <Route path="/actor/:id" element={<ActorPage />} />
+            <Route path="/news" element={<NewsPage />} />
             <Route path="/stats" element={<StatsPage />} />
             <Route path="/analytics" element={<AnalyticsDashboard />} />
             <Route path="/profile" element={<ProfilePage />} />

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useContext } from 'react';
 import { api } from '../api/axios';
 import { Link } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 
 /* ============================================================================
    Аналитика платформы.
@@ -107,6 +108,8 @@ function Histogram({ points, unit = 'просм.', limit = 0 }) {
 
 /* ===== сама страница ===== */
 export const AnalyticsDashboard = () => {
+  const { user } = useContext(AuthContext);
+  const role = user?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || user?.role;
   const [period, setPeriod] = useState('30');
   const [type, setType] = useState('all');
   const [genreId, setGenreId] = useState('');
@@ -224,6 +227,15 @@ export const AnalyticsDashboard = () => {
     const maxViews = Math.max(1, ...stats.map((g) => g.views));
     return { stats, maxTitles, maxViews };
   }, [allGenres]);
+
+  if (role !== 'Admin' && role !== 'Moderator') {
+    return (
+      <div className="border-2 border-black p-8 text-center">
+        <h1 className="text-3xl font-black uppercase mb-2">403</h1>
+        <p className="text-lg font-medium">Аналитика доступна только администратору или модератору.</p>
+      </div>
+    );
+  }
 
   if (loading && !data) {
     return (

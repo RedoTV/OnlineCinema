@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { api } from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 
-const TABS = [['dashboard', 'Обзор'], ['catalog', 'Каталог'], ['actors', 'Актёры'], ['genres', 'Жанры'], ['moderation', 'Модерация']];
+const TABS = [['dashboard', 'Обзор'], ['catalog', 'Каталог'], ['actors', 'Актёры'], ['genres', 'Жанры'], ['moderation', 'Модерация'], ['news', 'Новости']];
 const blankMovie = { title: '', description: '', releaseYear: '', duration: '', genreIds: [], actorIds: [] };
 const blankSeries = { title: '', description: '', releaseYear: '', genreIds: [], actorIds: [] };
 const input = 'w-full border-2 border-black bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-black focus:ring-offset-2';
@@ -17,7 +17,7 @@ export function AdminPage() {
   const { user } = useContext(AuthContext);
   const role = user?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || user?.role;
   const [tab, setTab] = useState('dashboard');
-  const [data, setData] = useState({ movies: [], series: [], actors: [], genres: [], comments: [], ratings: [], dashboard: {} });
+  const [data, setData] = useState({ movies: [], series: [], actors: [], genres: [], comments: [], ratings: [], dashboard: {}, articles: [] });
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
   const [catalogType, setCatalogType] = useState('all');
@@ -44,12 +44,16 @@ export function AdminPage() {
   const notify = (text, type = 'ok') => { setMessage({ text, type }); window.setTimeout(() => setMessage(null), 3500); };
   const load = async () => {
     try {
-      const requests = [api.get('/Movies'), api.get('/Series'), api.get('/Actors'), api.get('/Genres'), api.get('/Admin/dashboard'), api.get('/Admin/comments'), api.get('/Admin/ratings')];
-      const [movies, shows, actors, genres, dashboard, comments, ratings] = await Promise.all(requests);
-      setData({ movies: movies.data, series: shows.data, actors: actors.data, genres: genres.data, dashboard: dashboard.data, comments: comments.data, ratings: ratings.data });
-    } catch (error) { notify(error.response?.status === 403 ? 'Недостаточно прав администратора' : errorText(error), 'error'); }
+      const core = [api.get('/Movies'), api.get('/Series'), api.get('/Actors'), api.get('/Genres'), api.get('/Admin/comments'), api.get('/Admin/ratings'), api.get('/Articles?all=true')];
+      const [movies, shows, actors, genres, comments, ratings, articles] = await Promise.all(core);
+      let dashboard = {};
+      if (role === 'Admin') {
+        try { dashboard = (await api.get('/Admin/dashboard')).data; } catch { dashboard = {}; }
+      }
+      setData({ movies: movies.data, series: shows.data, actors: actors.data, genres: genres.data, dashboard, comments: comments.data, ratings: ratings.data, articles: articles.data });
+    } catch (error) { notify(error.response?.status === 403 ? 'Недостаточно прав' : errorText(error), 'error'); }
   };
-  useEffect(() => { if (role === 'Admin') load(); }, [role]);
+  useEffect(() => { if (role === 'Admin' || role === 'Moderator') load(); }, [role]);
 
   const resetEditor = (type = editorType) => {
     setEditing(null); setEditorType(type); setMovie(blankMovie); setSeries(blankSeries); setPosterFile(null); setVideoFile(null);
@@ -91,7 +95,8 @@ export function AdminPage() {
     && (mediaFilter === 'all' || (mediaFilter === 'poster' && x.posterUrl) || (mediaFilter === 'no-poster' && !x.posterUrl) || (mediaFilter === 'video' && x.hasVideo) || (mediaFilter === 'no-video' && !x.hasVideo))), [data.movies, data.series, catalogType, catalogSearch, mediaFilter]);
 
   if (!user) return <Navigate to="/login" replace />;
-  if (role !== 'Admin') return <section className="border-2 border-black p-8"><h1 className="text-3xl font-black">403</h1><p>Эта страница доступна только администратору.</p></section>;
+  if (role !== 'Admin' && role !== 'Moderator') return <section className="border-2 border-black p-8"><h1 className="text-3xl font-black">403</h1><p>Эта страница доступна только администратору или модератору.</p></section>;
+  const isAdmin = role === 'Admin';
 
   const editContent = async row => {
     setEditorType(row.kind); setEditing(row.id); setPosterFile(null); setVideoFile(null);
@@ -113,7 +118,7 @@ export function AdminPage() {
 
   return <section className="relative left-1/2 w-[min(94vw,1500px)] -translate-x-1/2 space-y-6">
     <header className="flex flex-wrap items-end justify-between gap-4 border-b-4 border-black pb-5"><div><p className="text-sm font-bold uppercase tracking-[.25em]">Быстрое наполнение каталога</p><h1 className="text-4xl font-black">ADMIN WORKSPACE</h1></div><span className="border-2 border-black px-3 py-2 text-sm font-bold">{user.username}</span></header>
-    <nav className="flex flex-wrap gap-2" aria-label="Разделы администратора">{TABS.map(([id, title]) => <button key={id} onClick={() => setTab(id)} className={tab === id ? primary : secondary}>{title}</button>)}</nav>
+    <nav className="flex flex-wrap gap-2" aria-label="Разделы администратора">{(isAdmin ? TABS : TABS.filter(([id]) => id === 'moderation' || id === 'news')).map(([id, title]) => <button key={id} onClick={() => setTab(id)} className={tab === id ? primary : secondary}>{title}</button>)}</nav>
     {message && <div role="status" className={`border-2 border-black p-3 font-bold ${message.type === 'error' ? 'bg-black text-white' : 'bg-neutral-100 text-black'}`}>{message.text}</div>}
 
     {tab === 'dashboard' && <Dashboard data={data.dashboard} onOpen={setTab}/>}
@@ -135,6 +140,7 @@ export function AdminPage() {
     {tab === 'actors' && <PeoplePanel rows={data.actors.filter(x=>`${x.firstName} ${x.lastName}`.toLowerCase().includes(peopleSearch.toLowerCase()))} search={peopleSearch} setSearch={setPeopleSearch} actor={actor} setActor={setActor} editing={editingActor} busy={busy} onSave={async e=>{e.preventDefault();await run(()=>editingActor?api.put(`/Actors/${editingActor}`,actor):api.post('/Actors',actor),'Актёр сохранён');setActor({firstName:'',lastName:'',birthDate:'',biography:''});setEditingActor(null)}} onEdit={x=>{setActor({firstName:x.firstName,lastName:x.lastName,birthDate:x.birthDate||'',biography:x.biography||''});setEditingActor(x.id)}} onDelete={id=>run(()=>api.delete(`/Actors/${id}`),'Актёр удалён')}/>}
     {tab === 'genres' && <GenresPanel rows={data.genres.filter(x=>x.name.toLowerCase().includes(genreSearch.toLowerCase()))} search={genreSearch} setSearch={setGenreSearch} genre={genre} setGenre={setGenre} editing={editingGenre} busy={busy} onSave={async e=>{e.preventDefault();await run(()=>editingGenre?api.put(`/Genres/${editingGenre}`,genre):api.post('/Genres',genre),'Жанр сохранён');setGenre({name:''});setEditingGenre(null)}} onEdit={x=>{setGenre({name:x.name});setEditingGenre(x.id)}} onDelete={id=>run(()=>api.delete(`/Genres/${id}`),'Жанр удалён')}/>}
     {tab === 'moderation' && <ModerationPanel view={moderationView} setView={setModerationView} comments={data.comments} ratings={data.ratings} onToggle={x=>run(()=>api.post(`/Comments/${x.id}/hide?hide=${!x.isHidden}`),x.isHidden?'Комментарий опубликован':'Комментарий скрыт')} onDelete={id=>run(()=>api.delete(`/Comments/${id}`),'Комментарий удалён')}/>}
+    {tab === 'news' && <ArticlesPanel articles={data.articles} onPublish={x=>run(()=>api.post(`/Articles/${x.id}/publish?publish=${!x.isPublished}`),x.isPublished?'Статья скрыта':'Статья опубликована')} onDelete={id=>run(()=>api.delete(`/Articles/${id}`),'Статья удалена')}/>}
   </section>;
 }
 
@@ -176,6 +182,34 @@ function PeoplePanel({ rows, search, setSearch, actor, setActor, editing, busy, 
 function GenresPanel({ rows, search, setSearch, genre, setGenre, editing, busy, onSave, onEdit, onDelete }) { return <div className="grid gap-5 lg:grid-cols-[360px_1fr]"><form onSubmit={onSave} className="h-fit border-2 border-black p-4"><h2 className="mb-3 text-xl font-black">{editing?'ИЗМЕНИТЬ ЖАНР':'НОВЫЙ ЖАНР'}</h2><input className={input} required value={genre.name} onChange={e=>setGenre({name:e.target.value})} placeholder="Название"/><button disabled={busy} className={`${primary} mt-3`}>Сохранить</button></form><div><input className={`${input} mb-3`} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Поиск жанра…"/><SimpleTable rows={rows} columns={[["name","Название"]]} onEdit={onEdit} onDelete={onDelete}/></div></div>; }
 
 function ModerationPanel({ view, setView, comments, ratings, onToggle, onDelete }) { const [q,setQ]=useState(''); const rows=(view==='comments'?comments:ratings).filter(x=>JSON.stringify(x).toLowerCase().includes(q.toLowerCase())); return <><div className="grid gap-3 md:grid-cols-[auto_1fr]"><Segment value={view} onChange={setView} items={[["comments",`Комментарии (${comments.length})`],["ratings",`Оценки (${ratings.length})`]]}/><input className={input} value={q} onChange={e=>setQ(e.target.value)} placeholder="Фильтр по пользователю или материалу…"/></div>{view==='comments'?<SimpleTable rows={rows} columns={[["username","Пользователь"],["target","Материал"],["text","Текст"],["isHidden","Статус",x=>x.isHidden?'СКРЫТ':'ОПУБЛИКОВАН']]} customActions={x=><><button className={secondary} onClick={()=>onToggle(x)}>{x.isHidden?'Опубликовать':'Скрыть'}</button><Confirm onConfirm={()=>onDelete(x.id)}/></>}/>:<SimpleTable rows={rows} columns={[["username","Пользователь"],["contentType","Тип"],["target","Материал"],["ratingValue","Оценка"]]}/>}</>; }
+
+function ArticlesPanel({ articles, onPublish, onDelete }) {
+  const [q, setQ] = useState('');
+  const rows = articles.filter(x => JSON.stringify(x).toLowerCase().includes(q.toLowerCase()));
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <strong>{articles.length} статей</strong>
+        <input className={`${input} max-w-xs`} value={q} onChange={e => setQ(e.target.value)} placeholder="Фильтр по заголовку или автору…" />
+      </div>
+      <SimpleTable
+        rows={rows}
+        columns={[
+          ['title', 'Заголовок'],
+          ['authorUsername', 'Автор'],
+          ['createdAt', 'Дата', x => x.createdAt ? new Date(x.createdAt).toLocaleDateString('ru-RU') : '—'],
+          ['isPublished', 'Статус', x => x.isPublished ? 'ОПУБЛИКОВАНА' : 'НА МОДЕРАЦИИ'],
+        ]}
+        customActions={x => (
+          <>
+            <button className={secondary} onClick={() => onPublish(x)}>{x.isPublished ? 'Скрыть' : 'Опубликовать'}</button>
+            <Confirm onConfirm={() => onDelete(x.id)} />
+          </>
+        )}
+      />
+    </>
+  );
+}
 
 function SimpleTable({ rows, columns, onEdit, onDelete, customActions }) { return <div className="overflow-x-auto border-2 border-black"><table className="w-full text-left text-sm"><thead className="bg-black text-white"><tr>{columns.map(c=><th className="p-3" key={c[0]}>{c[1]}</th>)}{(onEdit||onDelete||customActions)&&<th className="p-3">Действия</th>}</tr></thead><tbody>{rows.map(row=><tr className="border-t-2 border-black" key={row.id}>{columns.map(c=><td className="p-3 align-top" key={c[0]}>{c[2]?c[2](row):row[c[0]]}</td>)}{(onEdit||onDelete||customActions)&&<td className="p-3"><div className="flex gap-2">{customActions?customActions(row):<>{onEdit&&<button className={secondary} onClick={()=>onEdit(row)}>Изменить</button>}{onDelete&&<Confirm onConfirm={()=>onDelete(row.id)}/>}</>}</div></td>}</tr>)}</tbody></table>{!rows.length&&<Empty text="Ничего не найдено"/>}</div>; }
 function Poster({ kind, id, hasPoster = true, stamp }) { const src=posterSrc(kind,id,stamp); const [failedSrc,setFailedSrc]=useState(''); return <div className="flex h-full min-h-36 items-center justify-center overflow-hidden bg-neutral-100 text-center text-xs font-bold">{hasPoster&&failedSrc!==src?<img className="h-full w-full object-cover" src={src} alt="Постер" onError={()=>setFailedSrc(src)}/>:<span className="p-2">НЕТ<br/>ПОСТЕРА</span>}</div>; }
