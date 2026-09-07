@@ -345,49 +345,57 @@ const commentBank = [
 
 async function seedRatingTable(users) {
   hdr('Оценки, статусы и комментарии');
+  const U = users.filter((x) => x.token);
+  if (!U.length) { skip('нет юзеров с токеном — оценки не проставить'); return; }
+  const MB = commentBank;
 
   const movieArr = [...movies.values()].sort((a, b) => a.id - b.id);
   const seriesArr = [...series.values()].sort((a, b) => a.id - b.id);
   if (!movieArr.length && !seriesArr.length) { skip('пусто — оценки не на ком проставить'); return; }
 
-  // каждый юзер ставит оценку на часть каталога, чтобы был разброс рейтингов
-  for (let i = 0; i < users.length; i++) {
-    const u = users[i];
-    if (!u.token) continue;
-    // фильмы (шаг ~ шестая часть каталога, смещение своё у каждого юзера)
-    const mvStep = Math.max(1, Math.floor(movieArr.length / 6 || 1));
-    for (let j = i; j < movieArr.length; j += mvStep) {
-      const mo = movieArr[j];
-      await api('POST', '/UserActions/rating', { body: { movieId: mo.id, rating: 6 + Math.floor(Math.random() * 5) }, token: u.token });
-      await api('POST', '/UserActions/status', { body: { movieId: mo.id, status: 'Watched' }, token: u.token });
-    }
+  function pickRating() { return 6 + Math.floor(Math.random() * 5); }
 
-    // комментарий на пару случайных фильмов
-    const mb = commentBank;
-    const lo = i % mb.length;
+  // 1. КАЖДЫЙ фильм получает оценку (детерминированно дополнительную у части).
+  for (let idx = 0; idx < movieArr.length; idx++) {
+    const mo = movieArr[idx];
+    const u = U[idx % U.length];
+    await api('POST', '/UserActions/rating', { body: { movieId: mo.id, rating: pickRating() }, token: u.token }).catch(() => {});
+    if ((mo.id * 5 + idx) % 2 === 1) {
+      await api('POST', '/UserActions/rating', { body: { movieId: mo.id, rating: pickRating() }, token: U[(idx + 3) % U.length].token }).catch(() => {});
+    }
+  }
+
+  // 2. Часть фильмов помечаем «просмотрено».
+  for (let j = 0; j < movieArr.length; j += 2) {
+    await api('POST', '/UserActions/status', { body: { movieId: movieArr[j].id, status: 'Watched' }, token: U[j % U.length].token }).catch(() => {});
+  }
+
+  // 3. Комментарии (пара штук на юзера по разным фильмам) с лайками.
+  for (let i = 0; i < U.length; i++) {
+    const u = U[i];
     const cc = Math.min(2, movieArr.length);
     for (let k = 0; k < cc; k++) {
       const mo = movieArr[(i * 3 + k) % movieArr.length];
-      const text = mb[(lo + k * 2) % mb.length];
-      const c = await api('POST', '/Comments', { body: { movieId: mo.id, text }, token: u.token });
-      if (c.status < 400 && c.data?.id && Math.random() < 0.5) {
-        const liker = users[(i + 1) % users.length];
-        if (liker?.token) await api('POST', `/Comments/${c.data.id}/like`, { token: liker.token });
-      }
-    }
-
-    // сериал — оценка эпизода
-    if (seriesArr.length) {
-      const so = seriesArr[i % seriesArr.length];
-      await api('POST', '/UserActions/rating', { body: { seriesId: so.id, rating: 7 + Math.floor(Math.random() * 4) }, token: u.token });
-      const sd = await api('GET', `/Series/${so.id}`);
-      const ep0 = sd.data?.seasons?.[0]?.episodes?.[0];
-      if (ep0) {
-        await api('POST', '/Comments', { body: { seriesId: so.id, text: mb[i % mb.length] }, token: u.token });
+      const c = await api('POST', '/Comments', { body: { movieId: mo.id, text: MB[(i + k * 2) % MB.length] }, token: u.token }).catch(() => null);
+      if (c && c.data?.id && Math.random() < 0.5) {
+        const liker = U[(i + 1) % U.length];
+        if (liker) await api('POST', `/Comments/${c.data.id}/like`, { token: liker.token }).catch(() => {});
       }
     }
   }
-  ok('оценки/статусы/комменты проставлены (с поправкой на существующие)');
+
+  // 4. КАЖДЫЙ сериал — оценка и (если есть первая серия) комментарий.
+  for (let si = 0; si < seriesArr.length; si++) {
+    const so = seriesArr[si];
+    await api('POST', '/UserActions/rating', { body: { seriesId: so.id, rating: 7 + Math.floor(Math.random() * 4) }, token: U[si % U.length].token }).catch(() => {});
+    const sd = await api('GET', `/Series/${so.id}`);
+    const ep0 = sd.data?.seasons?.[0]?.episodes?.[0];
+    if (ep0) {
+      await api('POST', '/Comments', { body: { seriesId: so.id, text: MB[si % MB.length] }, token: U[si % U.length].token }).catch(() => {});
+    }
+  }
+
+  ok(`оценки/статусы: ${movieArr.length} фильмов и ${seriesArr.length} сериалов; комментарии проставлены`);
 }
 
 // ---------------------------------------------------------------------------
