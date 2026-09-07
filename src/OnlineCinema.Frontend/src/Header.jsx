@@ -13,7 +13,8 @@ export const Header = () => {
         <header className="w-full border-b-2 border-black bg-white py-4 px-6 mb-8 sticky top-0 z-50">
             <div className="max-w-5xl mx-auto flex flex-wrap justify-between items-center gap-3">
                 <nav className="flex flex-wrap gap-6 font-bold text-lg">
-                    <Link to="/" className="hover:underline decoration-2 underline-offset-4">КАТАЛОГ</Link>
+                    <Link to="/" className="hover:underline decoration-2 underline-offset-4">ГЛАВНАЯ</Link>
+                    <Link to="/movies" className="hover:underline decoration-2 underline-offset-4">ФИЛЬМЫ</Link>
                     <Link to="/series" className="hover:underline decoration-2 underline-offset-4">СЕРИАЛЫ</Link>
                     <Link to="/news" className="hover:underline decoration-2 underline-offset-4">НОВОСТИ</Link>
                     {isStaff && (
