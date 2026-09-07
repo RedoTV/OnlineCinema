@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthProvider';
 import { Header } from './Header';
 import { HomePage } from './pages/HomePage';
+import { MoviesPage } from './pages/MoviesPage';
 import { MoviePage } from './pages/MoviePage';
 import { SeriesPage } from './pages/SeriesPage';
 import { ActorPage } from './pages/ActorPage';
@@ -21,6 +22,7 @@ function App() {
         <main className="max-w-5xl mx-auto px-6 pb-12 min-h-[80vh]">
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/movies" element={<MoviesPage />} />
             <Route path="/movie/:id" element={<MoviePage />} />
             <Route path="/series" element={<SeriesPage />} />
             <Route path="/series/:id" element={<SeriesPage />} />
